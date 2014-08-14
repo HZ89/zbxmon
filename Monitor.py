@@ -17,15 +17,11 @@ from fcntl import LOCK_EX, LOCK_UN
 
 
 class Monitor(object):
-    def __init__(self, app, get_monitor_data=None, instance=None, regular=None, attribute_name_list=None,
-                 discovery_func=None, is_discovery=False):
+    def __init__(self, app, regular=None):
 
         """
         @param app: type of str, name of your monitor app
-        @param get_monitor_data: type of function, the method of how get your app's data, should return a dict
-        @param instance: key of data the get_monitor_data return
         @param regular: regular expression used by _search_ip_port_from_proc
-        @param attribute_name_list: the name of attribute from discovery_func
         @return: object of Monitor
         """
         self._regular = regular
@@ -55,6 +51,10 @@ class Monitor(object):
 #            self._cache_file.flush()
 
     def __del__(self):
+        '''
+        use to free the lock
+        @return: None
+        '''
         fcntl.lockf(self._cache_file.fileno(), LOCK_UN)
         if not self._cache_file is None:
             self._cache_file.close()
@@ -71,6 +71,10 @@ class Monitor(object):
     #        return False
 
     def _is_cache_exist(self):
+        '''
+        test cache file exist
+        @return: bool
+        '''
 
         if os.path.isfile(self._cache_file_path) and len(self._data.keys()) > 1:
             return True
@@ -78,11 +82,22 @@ class Monitor(object):
         return False
 
     def _get_instance_list_from_cache(self):
+        '''
+        get instance list from cache
+        @return: list
+        '''
         return self._data['discovery']
 #        return  [ x.split(self._fs) for x in self._data.keys() if x != 'file_info' ]
 
 
     def get_item(self, instance, item, get_monitor_data_func=None):
+        '''
+        get item data from instance
+        @param instance: the instance you want get data
+        @param item: which monitor item you want get from the instance
+        @param get_monitor_data_func: this func used for get monitor data from each instances
+        @return:
+        '''
 
         if get_monitor_data_func:
             assert isinstance(get_monitor_data_func, types.FunctionType), 'get_monitor_data must be a function'
@@ -112,6 +127,12 @@ class Monitor(object):
             return self._data[instance][item]
 
     def _make_cache(self, data, instance):
+        '''
+        create and update cache file
+        @param data: the data you want put in cache file, must be a dict
+        @param instance: which instance of the data
+        @return: None
+        '''
         result = data
         # if not isinstance(result, dict):
         #     raise TypeError("result must be a dict!")
@@ -135,6 +156,10 @@ class Monitor(object):
         self._cache_file.flush()
 
     def _search_ip_port_from_proc(self):
+        '''
+        the default func for getting instances list
+        @return: list
+        '''
         pid_with_ip_port_list = []
         if not isinstance(self._regular, str):
             raise ValueError("regular must be a str now is %s" % type(self._regular))
@@ -151,12 +176,22 @@ class Monitor(object):
         return pid_with_ip_port_list
 
     def _get_ip_port(self):
+        '''
+        cut ip,port from list
+        @return: list
+        '''
         ip_ports = []
         for ip, port, _ in self._search_ip_port_from_proc():
             ip_ports.append([ip, port])
         return ip_ports
 
     def _get_instance_list(self, is_discovery=None, discovery_func=None):
+        '''
+        use the func discovery_func get instances
+        @param is_discovery: bool
+        @param discovery_func: the func how to get instaces
+        @return: list
+        '''
         if not discovery_func:
             get_instance_func = self._get_ip_port
         else:
