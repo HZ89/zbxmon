@@ -9,22 +9,21 @@ import os
 import hashlib
 import time
 import psutil
-import re
 import netifaces
 import types
+from functools import partial
 from fcntl import LOCK_EX, LOCK_UN
 
 
 
 class Monitor(object):
-    def __init__(self, app, regular=None):
+    def __init__(self, app):
 
         """
         @param app: type of str, name of your monitor app
-        @param regular: regular expression used by _search_ip_port_from_proc
         @return: object of Monitor
         """
-        self._regular = regular
+
         self._data = {'file_info': {'file': 'default'}}
         self._app = app
         self._result = {'data': []}
@@ -155,45 +154,51 @@ class Monitor(object):
         self._cache_file.write(json.dumps(self._data))
         self._cache_file.flush()
 
-    def _search_ip_port_from_proc(self):
+    # def _search_ip_port_from_proc(self):
+    #     '''
+    #     the default func for getting instances list
+    #     @return: list
+    #     '''
+    #     pid_with_ip_port_list = []
+    #     if not isinstance(self._regular, str):
+    #         raise ValueError("regular must be a str now is %s" % type(self._regular))
+    #     for proc in psutil.process_iter():
+    #         try:
+    #             if re.search(r"%s" % self._regular, os.path.basename(proc.cmdline()[0])):
+    #                 listen = [laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN']
+    #                 for ip, port in listen:
+    #                     if ip == '0.0.0.0' or ip == '::' or ip == '':
+    #                         ip = self._local_ip
+    #                     pid_with_ip_port_list.append([ip, port, proc.pid])
+    #         except IndexError:
+    #             pass
+    #     return pid_with_ip_port_list
+
+    def _get_ip_port(self, service):
         '''
-        the default func for getting instances list
+        cut ip,port from proc
+        @param service: the process name you want
         @return: list
         '''
-        pid_with_ip_port_list = []
-        if not isinstance(self._regular, str):
-            raise ValueError("regular must be a str now is %s" % type(self._regular))
-        for proc in psutil.process_iter():
-            try:
-                if re.search(r"%s" % self._regular, os.path.basename(proc.cmdline()[0])):
-                    listen = [laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN']
-                    for ip, port in listen:
-                        if ip == '0.0.0.0' or ip == '::' or ip == '':
-                            ip = self._local_ip
-                        pid_with_ip_port_list.append([ip, port, proc.pid])
-            except IndexError:
-                pass
-        return pid_with_ip_port_list
 
-    def _get_ip_port(self):
-        '''
-        cut ip,port from list
-        @return: list
-        '''
-        ip_ports = []
-        for ip, port, _ in self._search_ip_port_from_proc():
-            ip_ports.append([ip, port])
-        return ip_ports
+        result = []
+        for proc in [ i for i in psutil.process_iter() if i.name == service ]:
+            listen = sorted([ laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN' ])[0]
+            if listen[0][0] == '0.0.0.0' or listen[0][0] == '::' or listen[0][0] == '127.0.0.1' or listen[0][0] == '':
+                listen[0][0] = self._local_ip
+            result.append((listen[0][0], listen[0][1]))
+        return result
 
-    def _get_instance_list(self, is_discovery=None, discovery_func=None):
+    def _get_instance_list(self, procname=None, is_discovery=None, discovery_func=None):
         '''
         use the func discovery_func get instances
         @param is_discovery: bool
         @param discovery_func: the func how to get instaces
+        @param procname: arg for self._get_ip_port
         @return: list
         '''
         if not discovery_func:
-            get_instance_func = self._get_ip_port
+            get_instance_func = partial(self._get_ip_port, procname)
         else:
             get_instance_func = discovery_func
 
@@ -203,13 +208,14 @@ class Monitor(object):
             instance_list = self._get_instance_list_from_cache()
         return instance_list
 
-    def get_discovery_data(self, attribute_name_list, discovery_func=None):
+    def get_discovery_data(self, attribute_name_list, discovery_func=None, procname=None):
         '''
         format data to json which Zabbix LLD wanted
         if the number of attribute which get_instance_list return more then attribute_name_list,
         EXTEND# will be the name of this attributes
         @param attribute_name_list: return data's key
         @param discovery_func: func used for finding instance
+        @param procname: arg for self._get_ip_port
         @return: json data
         '''
         result = {'data': []}
@@ -217,7 +223,7 @@ class Monitor(object):
         if discovery_func:
             assert isinstance(discovery_func, types.FunctionType), 'discovery_func must be a function'
 
-        data = self._get_instance_list(is_discovery=True, discovery_func=discovery_func)
+        data = self._get_instance_list(is_discovery=True, discovery_func=discovery_func, procname=procname)
 
         self._make_cache({'discovery': data}, 'discovery')
 
