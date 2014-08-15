@@ -31,6 +31,7 @@ class ServiceMonitor(Monitor):
             get_func = getattr(self, get_func_name)
         else:
             raise AttributeError('have no func named {}'.format(get_func_name))
+
         if hasattr(self, discovery_func_name):
             discovery_func = getattr(self, discovery_func_name)
         else:
@@ -40,3 +41,5 @@ class ServiceMonitor(Monitor):
             return self.get_discovery_data(kwargs['attribute_name_list'], discovery_func)
         else:
             return self.get_item(instance, kwargs['item'], get_monitor_data_func=get_func)
+
+    def get_memcache_data(self):
