@@ -1,6 +1,7 @@
 __author__ = 'Harrison'
 from Monitor import Monitor
 from functools import partial
+import netifaces
 from argh import ArghParser
 import argparse
 
@@ -40,3 +41,39 @@ class ServiceMonitor(Monitor):
             return self.get_discovery_data(kwargs['attribute_name_list'], discovery_func)
         else:
             return self.get_item(instance, kwargs['item'], get_monitor_data_func=get_func)
+
+    def _get_ifaddr_list(self):
+        addrs=[]
+        for iface in netifaces.interfaces():
+            if iface.startswith('lo'): continue
+            try:
+                iaddrs=netifaces.ifaddresses(iface)[netifaces.AF_INET]
+            except:
+                continue
+            for addr in iaddrs:
+                addrs.append(addr['addr'])
+        return sorted(list(set(addrs)))
+    def discovery_zabbix_agent(self):
+        service_name='zabbix_agentd'
+        services=[]
+        for proc in [i for i in psutil.process_iter() if i.name() == service_name]:
+            listen=sorted([ laddr.laddr for laddr in proc.get_connection() if laddr.status == 'LISTEN'])[0]
+            if listen[0]  in ('0.0.0.0','::'):
+                listen[0]=[i for i in self._get_ifaddr_list() if i.startswitch('10.')][0]
+    def discovery_mysql(self):
+        service_name='mysqld'
+        services=[]
+        for proc in [i for i in psutil.process_iter() if i.name() == service_name]:
+            listen=sorted([ laddr.laddr for laddr in proc.get_connection() if laddr.status == 'LISTEN'])[0]
+            if listen[0]  in ('0.0.0.0','::'):
+                listen[0]=self.discovery_zabbix_agent()[0]
+    def get_mysql_data(self,bind,port,item):
+        import MySQLdb
+        status_cmds={'SHOW /*!50002 GLOBAL */ STATUS':None,
+                     'SHOW VARIABLES':None,
+                     'SHOW SLAVE STATUS NOLOCK':None,
+                     'SHOW SLAVE STATUS':None,
+                     'SHOW MASTER LOGS':None,
+                     'SHOW PROCESSLIST':None,
+                     'SHOW ENGINES':None
+                     }
