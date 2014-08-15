@@ -103,9 +103,8 @@ class Monitor(object):
         else:
             get_monitor_data_func = self._get_instance_info()
 
-        instance_list = self._get_instance_list()
+        instance_list = [ self._fs.join(i) for i in self._get_instance_list() ]
         monitor_data = {}
-
         for instance_name in instance_list:
             monitor_data[instance_name] = get_monitor_data_func(instance_name)
 
@@ -191,7 +190,7 @@ class Monitor(object):
             listen = sorted([ laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN' ])[0]
             if listen[0][0] == '0.0.0.0' or listen[0][0] == '::' or listen[0][0] == '127.0.0.1' or listen[0][0] == '':
                 listen[0][0] = self._local_ip
-            result.append((listen[0][0], listen[0][1]))
+            result.append([str(listen[0][0]), str(listen[0][1])])
         return result
 
     def _get_instance_list(self, procname=None, is_discovery=None, discovery_func=None):
