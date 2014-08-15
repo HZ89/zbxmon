@@ -50,10 +50,10 @@ class Monitor(object):
 #            self._cache_file.flush()
 
     def __del__(self):
-        '''
+        """
         use to free the lock
         @return: None
-        '''
+        """
         fcntl.lockf(self._cache_file.fileno(), LOCK_UN)
         if not self._cache_file is None:
             self._cache_file.close()
@@ -70,10 +70,10 @@ class Monitor(object):
     #        return False
 
     def _is_cache_exist(self):
-        '''
+        """
         test cache file exist
         @return: bool
-        '''
+        """
 
         if os.path.isfile(self._cache_file_path) and len(self._data.keys()) > 1:
             return True
@@ -81,22 +81,22 @@ class Monitor(object):
         return False
 
     def _get_instance_list_from_cache(self):
-        '''
+        """
         get instance list from cache
         @return: list
-        '''
+        """
         return self._data['discovery']
 #        return  [ x.split(self._fs) for x in self._data.keys() if x != 'file_info' ]
 
 
     def get_item(self, instance, item, get_monitor_data_func=None):
-        '''
+        """
         get item data from instance
         @param instance: the instance you want get data
         @param item: which monitor item you want get from the instance
         @param get_monitor_data_func: this func used for get monitor data from each instances
         @return:
-        '''
+        """
 
         if get_monitor_data_func:
             assert isinstance(get_monitor_data_func, types.FunctionType), 'get_monitor_data must be a function'
@@ -104,6 +104,11 @@ class Monitor(object):
             get_monitor_data_func = self._get_instance_info()
 
         instance_list = self._get_instance_list()
+        monitor_data = {}
+
+        for instance_name in instance_list:
+            monitor_data[instance_name] = get_monitor_data_func(instance_name)
+
         key = instance + '_' + item
 #        read file in init func
 #        if self._data['file_info']['file'] == 'default' and self._cache_file.mode == 'rw':
@@ -111,7 +116,7 @@ class Monitor(object):
 
         if self._is_cache_exist():
             if self._data['file_info']['file'] == self._data['file_info'][key]:
-                self._make_cache(get_monitor_data_func(instance_list), instance)
+                self._make_cache(monitor_data, instance)
                 return self._data[instance][item]
             else:
                 #change version
@@ -122,16 +127,16 @@ class Monitor(object):
                 self._cache_file.flush()
                 return self._data[instance][item]
         else:
-            self._make_cache(get_monitor_data_func(instance_list), instance)
+            self._make_cache(monitor_data, instance)
             return self._data[instance][item]
 
     def _make_cache(self, data, instance):
-        '''
+        """
         create and update cache file
         @param data: the data you want put in cache file, must be a dict
         @param instance: which instance of the data
         @return: None
-        '''
+        """
         result = data
         # if not isinstance(result, dict):
         #     raise TypeError("result must be a dict!")
@@ -175,11 +180,11 @@ class Monitor(object):
     #     return pid_with_ip_port_list
 
     def _get_ip_port(self, service):
-        '''
+        """
         cut ip,port from proc
         @param service: the process name you want
         @return: list
-        '''
+        """
 
         result = []
         for proc in [ i for i in psutil.process_iter() if i.name == service ]:
@@ -190,13 +195,13 @@ class Monitor(object):
         return result
 
     def _get_instance_list(self, procname=None, is_discovery=None, discovery_func=None):
-        '''
+        """
         use the func discovery_func get instances
         @param is_discovery: bool
         @param discovery_func: the func how to get instaces
         @param procname: arg for self._get_ip_port
         @return: list
-        '''
+        """
         if not discovery_func:
             get_instance_func = partial(self._get_ip_port, procname)
         else:
@@ -209,7 +214,7 @@ class Monitor(object):
         return instance_list
 
     def get_discovery_data(self, attribute_name_list, discovery_func=None, procname=None):
-        '''
+        """
         format data to json which Zabbix LLD wanted
         if the number of attribute which get_instance_list return more then attribute_name_list,
         EXTEND# will be the name of this attributes
@@ -217,7 +222,7 @@ class Monitor(object):
         @param discovery_func: func used for finding instance
         @param procname: arg for self._get_ip_port
         @return: json data
-        '''
+        """
         result = {'data': []}
 
         if discovery_func:
@@ -239,8 +244,8 @@ class Monitor(object):
         return json.dumps(result)
 
     def _get_instance_info(self):
-        '''
+        """
         you can overload this func get monitor data
         @return: must be dict key by "ip:port"
-        '''
+        """
         return None
