@@ -38,6 +38,7 @@ class Monitor(object):
             self._local_ip = netifaces.ifaddresses('em2')[netifaces.AF_INET][0]['addr']
         else:
             raise SystemError("can not find internal netifaces")
+
         try:
             self._cache_file = open(self._cache_file_path, "r+")
             fcntl.lockf(self._cache_file.fileno(), LOCK_EX)
