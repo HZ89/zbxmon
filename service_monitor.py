@@ -93,13 +93,11 @@ def main(args):
         assert not args.instance is None, 'must have instance'
         assert not args.item is None, 'must have item'
     monitor = ServiceMonitor(args.service)
-    func = partial( monitor.load_data, args.service, args.instance, args.discovery, args.item, args.macros)
+    arg_list = []
     if args.extend:
         assert args.extend.find(',') == 1, "extend must split by ','"
         arg_list = args.extend.split(',')
-        for func_arg in arg_list:
-            func = partial(func, func_arg)
-    print func()
+    print monitor.load_data(args.service, args.instance, args.discovery, args.item, args.macros, *arg_list)
 
 
 
