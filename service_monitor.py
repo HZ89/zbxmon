@@ -6,7 +6,7 @@ import argparse
 
 BIN={
     'mysql': 'mysqld',
-    'redis': 'redis',
+    'redis-server': 'redis',
     'memcache': 'memcached',
     'mongodb': 'mongod',
 }
@@ -70,6 +70,52 @@ class ServiceMonitor(Monitor):
         :param return: dict
         """
         import pymongo
+        uri = "mongodb://{}@{}:{}/admin".format(instance_name, mongo_user, mongo_passwd)
+        db = pymongo.MongoClient(uri)
+        coll = db.admin
+        status = coll.command('serverStatus', 1)
+        db.disconnect()
+        mongo_status = {}
+
+        mongo_status.update({'host': status['host']})
+        mongo_status.update({'version': status['version']})
+        mongo_status.update({'uptime': status['uptime']})
+
+        mongo_status.update({'globalLock_activeClients_total': status['globalLock']['activeClients']['total']})
+        mongo_status.update({'globalLock_activeClients_readers': status['globalLock']['activeClients']['readers']})
+        mongo_status.update({'globalLock_activeClients_writes': status['globalLock']['activeClients']['writers']})
+
+        mongo_status.update({'mem_resident': status['mem']['resident']})
+        mongo_status.update({'mem_virtual': status['mem']['virtual']})
+
+        mongo_status.update({'connections_current': status['connections']['current']})
+        mongo_status.update({'connections_available': status['connections']['available']})
+        mongo_status.update({'connections_totalCreated': status['connections']['totalCreated']})
+
+        mongo_status.update({'indexCounters_hits': status['indexCounters']['hits']})
+        mongo_status.update({'indexCounters_misses': status['indexCounters']['misses']})
+        mongo_status.update({'indexCounters_missRatio': status['indexCounters']['missRatio']})
+
+        mongo_status.update({'network_bytesIn': status['network']['bytesIn']})
+        mongo_status.update({'network_bytesOut': status['network']['bytesOut']})
+        mongo_status.update({'network_numRequests': status['network']['numRequests']})
+
+        mongo_status.update({'opcounters_insert': status['opcounters']['insert']})
+        mongo_status.update({'opcounters_query': status['opcounters']['query']})
+        mongo_status.update({'opcounters_update': status['opcounters']['update']})
+        mongo_status.update({'opcounters_delete': status['opcounters']['delete']})
+        mongo_status.update({'opcounters_getmore': status['opcounters']['getmore']})
+
+        mongo_status.update({'dur_commits': status['dur']['commits']})
+        mongo_status.update({'dur_journaledMB': status['dur']['journaledMB']})
+        mongo_status.update({'dur_writeToDataFilesMB': status['dur']['writeToDataFilesMB']})
+        mongo_status.update({'dur_timeMs_writerToJournal': status['dur']['timeMs']['writeToJournal']})
+        mongo_status.update({'dur_timeMs_writerToDataFiles': status['dur']['timeMs']['writeToDataFiles']})
+
+        return mongo_status
+
+    def discovery_redis(self):
+        return None
 
 
 
