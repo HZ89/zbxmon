@@ -72,7 +72,7 @@ class Monitor(object):
 
     def _is_cache_exist(self):
         """
-        test cache file exist
+        test cache file exist and have data
         @return: bool
         """
 
@@ -105,10 +105,6 @@ class Monitor(object):
             get_monitor_data_func = self._get_instance_info()
 
         instance_list = [ self._fs.join(i) for i in self._get_instance_list() ]
-        monitor_data = {}
-        for instance_name in instance_list:
-            monitor_data[instance_name] = get_monitor_data_func(instance_name)
-
         key = instance + '_' + item
 #        read file in init func
 #        if self._data['file_info']['file'] == 'default' and self._cache_file.mode == 'rw':
@@ -116,10 +112,13 @@ class Monitor(object):
 
         if self._is_cache_exist():
             if self._data['file_info']['file'] == self._data['file_info'][key]:
-                self._make_cache(monitor_data, instance)
+                monitor_data = {}
+                for instance_name in instance_list:
+                    monitor_data[instance_name] = get_monitor_data_func(instance_name)
+                self._make_cache(monitor_data, instance, item)
                 return self._data[instance][item]
             else:
-                #change version
+                #update key version
                 self._data['file_info'][key] = self._data['file_info']['file']
                 self._cache_file.seek(0)
                 self._cache_file.truncate()
@@ -127,14 +126,18 @@ class Monitor(object):
                 self._cache_file.flush()
                 return self._data[instance][item]
         else:
-            self._make_cache(monitor_data, instance)
+            monitor_data = {}
+            for instance_name in instance_list:
+                monitor_data[instance_name] = get_monitor_data_func(instance_name)
+            self._make_cache(monitor_data, instance, item)
             return self._data[instance][item]
 
-    def _make_cache(self, data, instance):
+    def _make_cache(self, data, instance, item):
         """
         create and update cache file
         @param data: the data you want put in cache file, must be a dict
         @param instance: which instance of the data
+        @param item: used to build key
         @return: None
         """
         result = data
@@ -142,12 +145,13 @@ class Monitor(object):
         #     raise TypeError("result must be a dict!")
         version = hashlib.md5(str(time.time())).hexdigest()
         if self._is_cache_exist():
+            #update file verison and key verison
             try:
                 for k in result[instance].keys():
                     key = instance + '_' + k
                     if not key in self._data['file_info']:
                         self._data['file_info'][key] = 'default'
-                self._data['file_info']['file'] = self._data['file_info'][instance + '_' + self._item] = version
+                self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
                 self._data.update(result)
             except (ValueError, TypeError, KeyError):
                 raise TypeError("have no key named %s" % key)
