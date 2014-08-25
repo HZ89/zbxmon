@@ -154,13 +154,19 @@ class ServiceMonitor(Monitor):
 
         return redises
 
-    def get_redis_data(self, instance_name, passwd):
+    def get_redis_data(self, instance_name):
         """
+        get monitor data from redis
+        @param instance_name: ip:port:passwd
+        @return: dict
+        """
+        import redis
 
-        @param instance_name:
-        @param passwd:
-        @return:
-        """
+        ip, port, passwd = instance_name.split(':')
+        r = redis.StrictRedis(host=ip, port=port, password=passwd)
+
+        return r.info()
+
 
 
 
