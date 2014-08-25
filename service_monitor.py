@@ -63,11 +63,12 @@ class ServiceMonitor(Monitor):
             memcached_status['get_hits_ratio'] = 0
         return memcached_status
 
+
     def get_mongodb_data(self, instance_name, mongo_user, mongo_passwd):
         """
         the func used to get mongodb data
-        :param instance_name: the ip:port of mongodb
-        :param return: dict
+        @param instance_name: the ip:port of mongodb
+        @return: dict
         """
         import pymongo
         uri = "mongodb://{}@{}:{}/admin".format(instance_name, mongo_user, mongo_passwd)
@@ -114,10 +115,52 @@ class ServiceMonitor(Monitor):
 
         return mongo_status
 
+
     def discovery_redis(self):
-        return None
+        """
+        find redis instance
+        @return: [(ip, prot, passwd)]
+        """
+        import re
+        import psutil
+        import os
 
+        redises = []
+        redis_conf_path_root = '/data'
 
+        for redis_process in [ x
+                     for x in psutil.process_iter()
+                     if re.search(r"redis-server(-\d*)?$",
+                                  os.path.basename(x.cmdline()[0])) ]:
+            redis_ip, redis_port = sorted([ laddr.laddr
+                                            for laddr in redis_process.get_connections()
+                                            if laddr.status == 'LISTEN' ])[0]
+            redis_passwd = 'N/A'
+            if os.path.isfile(redis_process.cmdline()[1]):
+                with open(redis_process.cmdline()[1], 'r') as f:
+                    for line in f.read():
+                        if re.search('^requirepass', line):
+                            redis_passwd = line.split()[1]
+            else:
+                for root_dir, dirs, files in os.walk(redis_conf_path_root):
+                    for file in files:
+                        if str(file) == 'redis.conf' and re.search(redis_port, str(root_dir)):
+                            with open(os.path.join(root_dir, file), 'r') as f:
+                                for line in f.read():
+                                    if re.search('^requirepass', line):
+                                        redis_passwd = line.split()[1]
+
+            redises.append([redis_ip, redis_port, redis_passwd])
+
+        return redises
+
+    def get_redis_data(self, instance_name, passwd):
+        """
+
+        @param instance_name:
+        @param passwd:
+        @return:
+        """
 
 
 

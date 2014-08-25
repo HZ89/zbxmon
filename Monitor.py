@@ -87,7 +87,7 @@ class Monitor(object):
         @return: list
         """
         return self._data['discovery']
-#        return  [ x.split(self._fs) for x in self._data.keys() if x != 'file_info' ]
+#       return  [ x.split(self._fs) for x in self._data.keys() if x != 'file_info' ]
 
 
     def get_item(self, instance, item, get_monitor_data_func=None):
