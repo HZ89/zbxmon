@@ -104,7 +104,7 @@ class Monitor(object):
         else:
             get_monitor_data_func = self._get_instance_info()
 
-        instance_list = [ self._fs.join(i) for i in self._get_instance_list() ]
+        instance_list = [ self._fs.join([i[0], i[1]]) for i in self._get_instance_list() ]
         key = instance + '_' + item
 #        read file in init func
 #        if self._data['file_info']['file'] == 'default' and self._cache_file.mode == 'rw':
@@ -116,7 +116,7 @@ class Monitor(object):
                 for instance_name in instance_list:
                     monitor_data[instance_name] = get_monitor_data_func(instance_name)
                 self._make_cache(monitor_data, instance, item)
-                return self._data[instance][item]
+                return monitor_data[instance][item]
             else:
                 #update key version
                 self._data['file_info'][key] = self._data['file_info']['file']
@@ -130,7 +130,7 @@ class Monitor(object):
             for instance_name in instance_list:
                 monitor_data[instance_name] = get_monitor_data_func(instance_name)
             self._make_cache(monitor_data, instance, item)
-            return self._data[instance][item]
+            return monitor_data[instance][item]
 
     def _make_cache(self, data, instance, item):
         """
