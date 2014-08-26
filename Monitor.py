@@ -9,10 +9,11 @@ import os
 import hashlib
 import time
 import psutil
-import netifaces
 import types
+from netifaces import interfaces, ifaddresses, AF_INET
 from functools import partial
 from fcntl import LOCK_EX, LOCK_UN
+from re import search
 
 
 
@@ -30,14 +31,21 @@ class Monitor(object):
         self._fs = ':'
         self._cache_file_path = os.getenv('TMPDIR', '/tmp') + '/' + hashlib.md5(
             os.uname()[1] + self._app).hexdigest() + '_monitor.tmp'
-        interface = netifaces.interfaces()
 
-        if 'eth1' in interface:
-            self._local_ip = netifaces.ifaddresses('eth1')[netifaces.AF_INET][0]['addr']
-        elif 'em2' in interface:
-            self._local_ip = netifaces.ifaddresses('em2')[netifaces.AF_INET][0]['addr']
-        else:
-            raise SystemError("can not find internal netifaces")
+        #look for the local private ip
+        addresses = []
+        for iface_name in interfaces():
+            addresses.append([i['addr'] for i in
+                              ifaddresses(iface_name).setdefault(AF_INET, [{'addr': 'NO IP addr'}])][0])
+        for ips in sorted(addresses):
+            if search('^(?:10|172|192)\.'
+                      '(?:(?<=192\.)168|(?<=172\.)(?:(?:1[6-9])|(?:2\d)|(?:3[0-1]))|'
+                      '(?:(?<=10\.)(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))))\.'
+                      '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))\.'
+                      '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))',
+                ips):
+                self._local_ip = ips
+                break
 
         try:
             self._cache_file = open(self._cache_file_path, "r+")
@@ -154,7 +162,7 @@ class Monitor(object):
                 self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
                 self._data.update(result)
             except (ValueError, TypeError, KeyError):
-                raise TypeError("have no key named %s" % key)
+                raise TypeError("have no key named %s" % k)
         else:
             self._data.update(result)
 
@@ -234,7 +242,7 @@ class Monitor(object):
 
         data = self._get_instance_list(is_discovery=True, discovery_func=discovery_func, procname=procname)
 
-        self._make_cache({'discovery': data}, 'discovery')
+        self._make_cache({'discovery': data}, 'discovery', 'discovery')
 
         for instance in data:
             tmp_dict = {}
