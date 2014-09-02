@@ -3,19 +3,21 @@ from Monitor import Monitor
 from functools import partial
 from argh import ArghParser, arg
 import argparse
+from mysql_monitor import MySQL_Monitor
 
 BIN={
     'mysql': 'mysqld',
-    'redis-server': 'redis',
+    'redis':'redis-server',
     'memcache': 'memcached',
     'mongodb': 'mongod',
 }
 
 class ServiceMonitor(Monitor):
+    get_mysql_data=partial(MySQL_Monitor.get_data,)
     def _get_bin_name(self, service):
         return BIN[service]
 
-    def load_data(self, service, instance, is_discovery=False, item=None ,macro_name_list=None, *args):
+    def load_data(self, service, instance,  item=None , *args):
         """
         auto load func to get monitor data
         @param service: the name of service
@@ -24,28 +26,23 @@ class ServiceMonitor(Monitor):
         @param args: other args like the args of func get_XXX_data
         @return: string
         """
-
         get_func_name = 'get_{}_data'.format(service)
-        discovery_func_name = 'discovery_{}'.format(service)
         if hasattr(self, get_func_name):
             get_func = getattr(self, get_func_name)
             #add args
             if args:
-                for tag in args:
-                    get_func = partial(get_func, tag)
+                get_func = partial(get_func, *args)
         else:
             raise AttributeError('have no func named {}'.format(get_func_name))
+        return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
+
+    def discovery(self,service,macro_name_list):
+        discovery_func_name = 'discovery_{}'.format(service)
         if hasattr(self, discovery_func_name):
             discovery_func = getattr(self, discovery_func_name)
         else:
             discovery_func = partial(self._get_ip_port, self._get_bin_name(service))
-
-        if is_discovery:
-            return self.get_discovery_data(macro_name_list, discovery_func)
-        else:
-            return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
-
-
+        return self.get_discovery_data(macro_name_list, discovery_func)
     def get_memcache_data(self, instance_name):
         """
         the func used to get memcache data
@@ -64,7 +61,7 @@ class ServiceMonitor(Monitor):
         return memcached_status
 
 
-    def get_mongodb_data(self, instance_name, mongo_user, mongo_passwd):
+    def get_mongodb_data(self, mongo_user, mongo_passwd,instance_name):
         """
         the func used to get mongodb data
         @param instance_name: the ip:port of mongodb
@@ -170,11 +167,12 @@ class ServiceMonitor(Monitor):
 
 
 
+
 @arg('--discovery', '-D', default=False, required=True, help='Discovery the service instance and return json data')
 @arg('--service', '-S', required=True, help='the service name of monitor')
 @arg('--instance', '-I', help='the name of the instance you want')
 @arg('--item', '-K', help='the item of you want')
-@arg('--macros', '-M', help='the macro list, used to build discovery data')
+@arg('--macros', '-M', help='the macro list, used to build discovery data eg:p1,p2,p3')
 @arg('--extend', '-E', help='extend args eg. p,p1,p2')
 def main(args):
     """
@@ -192,7 +190,10 @@ def main(args):
     if args.extend:
         assert args.extend.find(',') == 1, "extend must split by ','"
         arg_list = args.extend.split(',')
-    print monitor.load_data(args.service, args.instance, args.discovery, args.item, args.macros, *arg_list)
+    if args.discovery:
+        print monitor.discovery(args.service,args.macros.split(','))
+    else:
+        print monitor.load_data(args.service, args.instance,  args.item,  *arg_list)
 
 
 
