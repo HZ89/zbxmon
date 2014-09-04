@@ -42,9 +42,11 @@ class ServiceMonitor(Monitor):
         else:
             discovery_func = partial(self._get_ip_port, self._get_bin_name(service))
         return self.get_discovery_data(macro_name_list, discovery_func)
+
     def get_mysql_data(self,user,passwd,instance_name):
         host,port=instance_name.split(':')
         return MySQL_Monitor.get_monitor_data(host=host,port=port,user=user,passwd=passwd)
+
     def get_memcache_data(self, instance_name):
         """
         the func used to get memcache data
