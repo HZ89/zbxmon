@@ -191,7 +191,7 @@ class Monitor(object):
 
         result = []
         for proc in [ i for i in psutil.process_iter() if i.name() == service ]:
-            listen = sorted([ laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN' ])[0]
+            listen = list(sorted([ laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN' ])[0])
             if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
                 listen[0] = self._local_ip
             result.append([str(listen[0]), str(listen[1])])
