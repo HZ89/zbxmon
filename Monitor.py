@@ -111,12 +111,12 @@ class Monitor(object):
             get_monitor_data_func = self._get_instance_info()
 
         if self._is_cache_exist():
-            instance_list = [ self._fs.join([i[0], i[1]]) for i in self._get_instance_list() ]
+#            instance_list = [ self._fs.join([i[0], i[1]]) for i in self._get_instance_list() ]
             key = instance + '_' + item
             if self._data['file_info']['file'] == self._data['file_info'][key]:
                 monitor_data = {}
-                for instance_name in instance_list:
-                    monitor_data[instance_name] = get_monitor_data_func(instance_name)
+#                for instance_name in instance_list:
+                monitor_data[instance] = get_monitor_data_func(instance)
                 self._make_cache(monitor_data, instance, item)
                 return monitor_data[instance][item]
             else:
@@ -142,10 +142,9 @@ class Monitor(object):
         @return: None
         """
         result = data
-        # if not isinstance(result, dict):
-        #     raise TypeError("result must be a dict!")
+
         version = hashlib.md5(str(time.time())).hexdigest()
-            #update file verison and key verison
+
         try:
             for k in result[instance].keys():
                 key = instance + '_' + k
@@ -228,7 +227,7 @@ class Monitor(object):
         result = {'data': []}
 
         if discovery_func:
-            assert isinstance(discovery_func, types.FunctionType), 'discovery_func must be a function'
+            assert hasattr(discovery_func, '__call__'), 'discovery_func must can be callable'
 
         data = self._get_instance_list(is_discovery=True, discovery_func=discovery_func, procname=procname)
 
