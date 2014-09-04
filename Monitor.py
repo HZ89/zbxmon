@@ -144,14 +144,15 @@ class Monitor(object):
         result = data
 
         version = hashlib.md5(str(time.time())).hexdigest()
-
+        if 'discovery' in result.keys():
+            self._data.update(result)
         try:
             for k in result[instance].keys():
                 key = instance + '_' + k
                 if not key in self._data['file_info']:
                     self._data['file_info'][key] = 'default'
             self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
-            self._data.update(instance=result)
+            self._data.update(result)
         except (ValueError, TypeError, KeyError):
             raise TypeError("have no key named %s" % k)
 
