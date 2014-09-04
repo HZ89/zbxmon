@@ -106,17 +106,13 @@ class Monitor(object):
         """
 
         if get_monitor_data_func:
-            assert isinstance(get_monitor_data_func, types.FunctionType), 'get_monitor_data must be a function'
+            assert hasattr(get_monitor_data_func, '__call__'), 'get_monitor_data must can be callable'
         else:
             get_monitor_data_func = self._get_instance_info()
 
-        instance_list = [ self._fs.join([i[0], i[1]]) for i in self._get_instance_list() ]
-        key = instance + '_' + item
-#        read file in init func
-#        if self._data['file_info']['file'] == 'default' and self._cache_file.mode == 'rw':
-#            self._data = json.loads(self._cache_file.readline())
-
         if self._is_cache_exist():
+            instance_list = [ self._fs.join([i[0], i[1]]) for i in self._get_instance_list() ]
+            key = instance + '_' + item
             if self._data['file_info']['file'] == self._data['file_info'][key]:
                 monitor_data = {}
                 for instance_name in instance_list:
@@ -133,8 +129,7 @@ class Monitor(object):
                 return self._data[instance][item]
         else:
             monitor_data = {}
-            for instance_name in instance_list:
-                monitor_data[instance_name] = get_monitor_data_func(instance_name)
+            monitor_data[instance] = get_monitor_data_func(instance)
             self._make_cache(monitor_data, instance, item)
             return monitor_data[instance][item]
 
@@ -150,19 +145,16 @@ class Monitor(object):
         # if not isinstance(result, dict):
         #     raise TypeError("result must be a dict!")
         version = hashlib.md5(str(time.time())).hexdigest()
-        if self._is_cache_exist():
             #update file verison and key verison
-            try:
-                for k in result[instance].keys():
-                    key = instance + '_' + k
-                    if not key in self._data['file_info']:
-                        self._data['file_info'][key] = 'default'
-                self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
-                self._data.update(result)
-            except (ValueError, TypeError, KeyError):
-                raise TypeError("have no key named %s" % k)
-        else:
-            self._data.update(result)
+        try:
+            for k in result[instance].keys():
+                key = instance + '_' + k
+                if not key in self._data['file_info']:
+                    self._data['file_info'][key] = 'default'
+            self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
+            self._data.update(instance=result)
+        except (ValueError, TypeError, KeyError):
+            raise TypeError("have no key named %s" % k)
 
         self._cache_file.seek(0)
         self._cache_file.truncate()
