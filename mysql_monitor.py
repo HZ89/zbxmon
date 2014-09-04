@@ -442,7 +442,7 @@ class MySQL_Monitor(object):
         :return: a dict with the mysql instance performace data
         '''
         try:
-            conn = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd)
+            conn = MySQLdb.connect(host=host, port=int(port), user=user, passwd=passwd)
         except Exception as e:
             print e.message
             return {}
