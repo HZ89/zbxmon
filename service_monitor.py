@@ -44,7 +44,7 @@ class ServiceMonitor(Monitor):
         return self.get_discovery_data(macro_name_list, discovery_func)
     def get_mysql_data(self,user,passwd,instance_name):
         host,port=instance_name.split(':')
-        return MySQL_Monitor.get_data(host=host,port=port,user=user,passwd=passwd)
+        return MySQL_Monitor.get_monitor_data(host=host,port=port,user=user,passwd=passwd)
     def get_memcache_data(self, instance_name):
         """
         the func used to get memcache data
@@ -123,7 +123,6 @@ class ServiceMonitor(Monitor):
         import re
         import psutil
         import os
-
         redises = []
         redis_conf_path_root = '/data'
 
@@ -148,9 +147,7 @@ class ServiceMonitor(Monitor):
                                 for line in f.read():
                                     if re.search('^requirepass', line):
                                         redis_passwd = line.split()[1]
-
             redises.append([redis_ip, redis_port, redis_passwd])
-
         return redises
 
     def get_redis_data(self, instance_name):
@@ -165,9 +162,6 @@ class ServiceMonitor(Monitor):
         r = redis.StrictRedis(host=ip, port=port, password=passwd)
 
         return r.info()
-
-
-
 
 
 @arg('--discovery', '-D', default=False, required=True, help='Discovery the service instance and return json data')
@@ -196,8 +190,6 @@ def main(args):
         print monitor.discovery(args.service,args.macros.split(','))
     else:
         print monitor.load_data(args.service, args.instance,  args.item,  *arg_list)
-
-
 
 
 if __name__ == '__main__':
