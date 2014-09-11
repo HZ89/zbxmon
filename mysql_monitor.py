@@ -126,7 +126,7 @@ class MySQL_Monitor(object):
                 #SEMAPHORES
                 if line.startswith('Mutex spin waits'):
                     # Mutex spin waits 79626940, rounds 157459864, OS waits 698719
-                    row = [int(i) for i in re.findall('Mutex spin waits (\d+), rounds (\d+), OS waits (\d+)', line)[0]
+                    row = [int(i) for i in re.findall('Mutex spin waits\s+(\d+), rounds\s+(\d+),\s*OS waits\s+(\d+)', line)[0]
                            if len(i) > 0]
                     status['spin_waits'].append(row[0])
                     status['spin_rounds'].append(row[1])
@@ -136,7 +136,7 @@ class MySQL_Monitor(object):
                     # Post 5.5.17 SHOW ENGINE INNODB STATUS syntax
                     # RW-shared spins 604733, rounds 8107431, OS waits 241268
                     row = [int(i) for i in
-                           re.findall('RW-shared spins (\d+),(?: rounds (\d+),)? OS waits (\d+)', line)[0] if
+                           re.findall('RW-shared spins\s+(\d+),(?:\s*rounds\s+(\d+),)? OS waits\s+(\d+)', line)[0] if
                            len(i) > 0]
                     if len(row) == 3:  row.pop(1)
                     status['spin_waits'].append(row[0])
@@ -145,7 +145,7 @@ class MySQL_Monitor(object):
                     # RW-shared spins 3859028, OS waits 2100750; RW-excl spins 4641946, OS waits 1530310
                     # Post 5.5.17 SHOW ENGINE INNODB STATUS syntax
                     # RW-excl spins 604733, rounds 8107431, OS waits 241268
-                    row = [int(i) for i in re.findall('RW-excl spins (\d+),(?: rounds (\d+),)? OS waits (\d+)', line)[0]
+                    row = [int(i) for i in re.findall('RW-excl spins\s+(\d+),(?: rounds\s+(\d+),)? OS waits\s+(\d+)', line)[0]
                            if len(i) > 0]
                     if len(row) == 3:  row.pop(1)
                     status['spin_waits'].append(row[0])
@@ -153,7 +153,7 @@ class MySQL_Monitor(object):
                 elif line.find('seconds the semaphore:') != -1:
                     # --Thread 907205 has waited at handler/ha_innodb.cc line 7156 for 1.00 seconds the semaphore:
                     status['innodb_sem_waits'] += 1
-                    row = re.findall('for (\d+.\d+) seconds the semaphore:', line)[0]
+                    row = re.findall('for\s+(\d+.\d+) seconds the semaphore:', line)[0]
                     status['innodb_sem_wait_time_ms'] += float(row[0]) * 1000
                 #TRANSACTIONS
                 elif line.startswith('Trx id counter'):
@@ -161,19 +161,19 @@ class MySQL_Monitor(object):
                     # transactions
                     # Trx id counter 0 1170664159
                     # Trx id counter 861B144C
-                    row = [i for i in re.findall('Trx id counter(?: (\d+))? (\w+)', line)[0] if len(i) > 0]
+                    row = [i for i in re.findall('Trx id counter(?: (\d+))?\s+(\w+)', line)[0] if len(i) > 0]
                     status['innodb_transactions'] = int(row[0] if len(row) == 1 else row[0] + row[1], 16)
                     txn_seen = True
                 elif line.startswith('Purge done for trx'):
                     # Purge done for trx's n:o < 0 1170663853 undo n:o < 0 0
                     # Purge done for trx's n:o < 861B135D undo n:o < 0
-                    row = [i for i in re.findall('''Purge done for trx's n:o <(?: (\w+))? (\w+) undo n:o <''', line)[0]
+                    row = [i for i in re.findall('''Purge done for trx's n:o <(?: (\w+))?\s+(\w+) undo n:o <''', line)[0]
                            if len(i) > 0]
                     status['unpurged_txns'] = status['innodb_transactions'] - int(
                         row[0] if len(row) == 1 else row[0] + row[1], 16)
                 elif line.startswith('History list length'):
                     #History list length 1557
-                    row = re.findall('History list length (\d+)', line)
+                    row = re.findall('History list length\s+(\d+)', line)
                     status['history_list'] = int(row[0])
                 elif txn_seen and line.startswith('---TRANSACTION'):
                     # ---TRANSACTION 0, not started, process no 13510, OS thread id 1170446656
@@ -182,45 +182,45 @@ class MySQL_Monitor(object):
                     if line.find('ACTIVE') != -1: status['active_transactions'] += 1
                 elif txn_seen and line.startswith('------- TRX HAS BEEN'):
                     # ------- TRX HAS BEEN WAITING 32 SEC FOR THIS LOCK TO BE GRANTED:
-                    row = re.findall('TRX HAS BEEN WAITING (\d+) SEC FOR THIS LOCK TO BE GRANTED', line)
+                    row = re.findall('TRX HAS BEEN WAITING\s+(\d+)\s+SEC FOR THIS LOCK TO BE GRANTED', line)
                     status['innodb_lock_wait_secs'] += int(row[0])
                 elif line.find('read views open inside InnoDB') != -1:
                     # 1 read views open inside InnoDB
-                    row = re.findall('(\d+) read views open inside InnoDB', line)
+                    row = re.findall('(\d+)\s+read views open inside InnoDB', line)
                     status['read_views'] += int(row[0])
                 elif line.startswith('mysql tables in use'):
                     # mysql tables in use 2, locked 2
-                    row = re.findall('mysql tables in use (\d+), locked (\d+)', line)[0]
+                    row = re.findall('mysql tables in use\s+(\d+), locked\s+(\d+)', line)[0]
                     status['innodb_tables_in_use'] += int(row[0])
                     status['innodb_locked_tables'] += int(row[1])
                 elif txn_seen and line.find('lock struct(s)') != -1:
                     # 23 lock struct(s), heap size 3024, undo log entries 27
                     # LOCK WAIT 12 lock struct(s), heap size 3024, undo log entries 5
-                    row = re.findall('(\d+) lock struct\(s\)', line)[0]
+                    row = re.findall('(\d+)\s+lock struct\(s\)', line)[0]
                     status['innodb_lock_structs'] += int(row)
                     if line.startswith('LOCK WAIT'):
                         status['locked_transactions'] += int(row)
                 # FILE I/O
                 elif line.find(' OS file reads, ') != -1:
                     # 8782182 OS file reads, 15635445 OS file writes, 947800 OS fsyncs
-                    row = re.findall('(\d+) OS file reads, (\d+) OS file writes, (\d+) OS fsyncs', line)[0]
+                    row = re.findall('(\d+) OS file reads,\s+(\d+) OS file writes,\s+(\d+) OS fsyncs', line)[0]
                     status['file_reads'] = int(row[0])
                     status['file_writes'] = int(row[1])
                     status['file_fsyncs'] = int(row[2])
                 elif line.startswith('Pending normal aio reads:'):
                     # Pending normal aio reads: 0, aio writes: 0,
-                    row = re.findall('Pending normal aio reads: (\d+).*, aio writes: (\d+).*,', line)[0]
+                    row = re.findall('Pending normal aio reads:\s+(\d+).*, aio writes:\s+(\d+).*,', line)[0]
                     status['pending_normal_aio_reads'] = int(row[0])
                     status['pending_normal_aio_writes'] = int(row[1])
                 elif line.startswith('ibuf aio reads'):
                     #  ibuf aio reads: 0, log i/o's: 0, sync i/o's: 0
-                    row = re.findall('''ibuf aio reads: (\d+), log i/o's: (\d+), sync i/o's: (\d+)''', line)[0]
+                    row = re.findall('''ibuf aio reads:\s+(\d+), log i/o's:\s+(\d+), sync i/o's:\s+(\d+)''', line)[0]
                     status['pending_ibuf_aio_reads'] = int(row[0])
                     status['pending_aio_log_ios'] = int(row[1])
                     status['pending_aio_sync_ios'] = int(row[2])
                 elif line.startswith('Pending flushes (fsync)'):
                     # Pending flushes (fsync) log: 0; buffer pool: 0
-                    row = re.findall('Pending flushes \(fsync\) log: (\d+); buffer pool: (\d+)', line)[0]
+                    row = re.findall('Pending flushes \(fsync\) log:\s+(\d+); buffer pool:\s+(\d+)', line)[0]
                     status['pending_log_flushes'] = int(row[0])
                     status['pending_buf_pool_flushes'] = int(row[1])
                 # INSERT BUFFER AND ADAPTIVE HASH INDEX
@@ -229,7 +229,7 @@ class MySQL_Monitor(object):
                     # had two lines in the output.  Newer has just one line, see below.
                     # Ibuf for space 0: size 1, free list len 887, seg size 889, is not empty
                     # Ibuf for space 0: size 1, free list len 887, seg size 889,
-                    row = re.findall('Ibuf for space 0: size (\d+), free list len (\d+), seg size (\d+)', line)[0]
+                    row = re.findall('Ibuf for space 0: size\s+(\d+), free list len\s+(\d+), seg size\s+(\d+)', line)[0]
                     status['ibuf_used_cells'] = int(row[0])
                     status['ibuf_free_cells'] = int(row[1])
                     status['ibuf_cell_count'] = int(row[2])
@@ -237,7 +237,7 @@ class MySQL_Monitor(object):
                     # Ibuf: size 1, free list len 4634, seg size 4636,
                     #Ibuf: size 1, free list len 11, seg size 13, 17 merges
                     row = [i for i in
-                           re.findall('Ibuf: size (\d+), free list len (\d+), seg size (\d+),(?: (\d+) merges)?', line)[
+                           re.findall('Ibuf: size\s+(\d+), free list len\s+(\d+), seg size\s+(\d+),(?: (\d+) merges)?', line)[
                                0] if len(i) > 0]
                     status['ibuf_used_cells'] = int(row[0])
                     status['ibuf_free_cells'] = int(row[1])
@@ -248,12 +248,12 @@ class MySQL_Monitor(object):
                     # Output of show engine innodb status has changed in 5.5
                     # merged operations:
                     # insert 593983, delete mark 387006, delete 73092
-                    row = re.findall('insert (\d+), delete mark (\d+), delete (\d+)', line)[0]
+                    row = re.findall('insert\s+(\d+), delete mark\s+(\d+), delete\s+(\d+)', line)[0]
                     status['ibuf_inserts'] = int(row[0])
                     status['ibuf_merged'] = int(row[0]) + int(row[1]) + int(row[2])
                 elif line.find(' merged recs, ') != -1:
                     # 19817685 inserts, 19817684 merged recs, 3552620 merges
-                    row = [int(i) for i in re.findall('(d+) inserts, (\d+) merged recs, (\d+) merges', line)[0]]
+                    row = [int(i) for i in re.findall('(d+) inserts,\s+(\d+) merged recs,\s+(\d+) merges', line)[0]]
                     status['ibuf_inserts'] = row[0]
                     status['ibuf_merged'] = row[1]
                     status['ibuf_merges'] = row[2]
@@ -261,7 +261,7 @@ class MySQL_Monitor(object):
                     # In some versions of InnoDB, the used cells is omitted.
                     # Hash table size 4425293, used cells 4229064, ....
                     # Hash table size 57374437, node heap has 72964 buffer(s) <-- no used cells
-                    row = [int(i) for i in re.findall('Hash table size (\d+),(?: used cells (\d+))?', line)[0] if
+                    row = [int(i) for i in re.findall('Hash table size\s+(\d+),(?: used cells\s+(\d+))?', line)[0] if
                            len(i) > 0]
                     status['hash_index_cells_total'] = row[0]
                     if len(row) == 2:
@@ -275,49 +275,49 @@ class MySQL_Monitor(object):
                     status['log_writes'] = int(row[0])
                 elif line.find(' pending log writes, ') != -1:
                     # 0 pending log writes, 0 pending chkp writes
-                    row = [int(i) for i in re.findall('(\d+) pending log writes, (\d+) pending chkp writes', line)[0]]
+                    row = [int(i) for i in re.findall('(\d+)\s+pending log writes, (\d+)\s+pending chkp writes', line)[0]]
                     status['pending_log_writes'] = row[0]
                     status['pending_chkp_writes'] = row[1]
                 elif line.startswith('Log sequence number'):
                     # This number is NOT printed in hex in InnoDB plugin.
                     # Log sequence number 13093949495856 //plugin
                     # Log sequence number 125 3934414864 //normal
-                    row = [i for i in re.findall('Log sequence number (\w+)(?: (\w+))?', line)[0] if len(i) > 0]
+                    row = [i for i in re.findall('Log sequence number\s+(\w+)(?: (\w+))?', line)[0] if len(i) > 0]
                     status['log_bytes_written'] = int(row[0]) if len(row) == 1 else int(row[0] + row[1], 16)
                 elif line.startswith('Log flushed up to'):
                     # This number is NOT printed in hex in InnoDB plugin.
                     # Log flushed up to   13093948219327
                     # Log flushed up to   125 3934414864
-                    row = [i for i in re.findall('Log flushed up to   (\w+)(?: (\w+))?', line)[0] if len(i) > 0]
+                    row = [i for i in re.findall('Log flushed up to\s+(\w+)(?: (\w+))?', line)[0] if len(i) > 0]
                     status['log_bytes_flushed'] = int(row[0]) if len(row) == 1 else int(row[0] + row[1], 16)
                 elif line.startswith('Last checkpoint at'):
                     # Last checkpoint at  125 3934293461
                     # Last checkpoint at  1663926
-                    row = [i for i in re.findall('Last checkpoint at  (\w+)(?: \w+)?', line)[0] if len(i) > 0]
+                    row = [i for i in re.findall('Last checkpoint at\s+(\w+)(?: \w+)?', line)[0] if len(i) > 0]
                     status['last_checkpoint'] = int(row[0]) if len(row) == 1 else int(row[0] + row[1], 16)
                 # BUFFER POOL AND MEMORY
                 elif line.startswith('Total memory allocated'):
                     #Total memory allocated 2146304000; in additional pool allocated 0
                     row = [int(i) for i in
-                           re.findall('Total memory allocated (\d+)(?:; in additional pool allocated (\d+))?', line)[0]
+                           re.findall('Total memory allocated\s+(\d+)(?:; in additional pool allocated\s+(\d+))?', line)[0]
                            if len(i) > 0]
                     status['total_mem_alloc'] = row[0]
                     if len(row) == 2: status['additional_pool_alloc'] = row[1]
                 elif line.startswith('Adaptive hash index '):
                     #   Adaptive hash index 1538240664 	(186998824 + 1351241840)
-                    row = [int(i) for i in re.findall('Adaptive hash index (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('Adaptive hash index\s+(\d+)', line) if len(i) > 0]
                     status['adaptive_hash_memory'] = row[0]
                 elif line.startswith('Page hash           '):
                     #   Page hash           11688584
-                    row = [int(i) for i in re.findall('Page hash           (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('Page hash\s+(\d+)', line) if len(i) > 0]
                     status['page_hash_memory'] = row[0]
                 elif line.startswith('Dictionary cache    '):
                     #   Dictionary cache    145525560 	(140250984 + 5274576)
-                    row = [int(i) for i in re.findall('Dictionary cache    (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('Dictionary cache\s+(\d+)', line) if len(i) > 0]
                     status['dictionary_cache_memory'] = row[0]
                 elif line.startswith('File system         '):
                     #   File system         313848 	(82672 + 231176)
-                    row = [int(i) for i in re.findall('File system         (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('File system\s+(\d+)', line) if len(i) > 0]
                     status['file_system_memory'] = row[0]
                 elif line.startswith('Lock system         '):
                     #   Lock system         29232616 	(29219368 + 13248)
@@ -329,29 +329,29 @@ class MySQL_Monitor(object):
                     status['recovery_system_memory'] = row[0]
                 elif line.startswith('Threads             '):
                     #   Threads             409336 	(406936 + 2400)
-                    row = [int(i) for i in re.findall('Threads             (\d+)', line)[0] if len(i) > 0]
+                    row = [int(i) for i in re.findall('Threads\s+(\d+)', line)[0] if len(i) > 0]
                     status['thread_hash_memory'] = row[0]
                 elif line.startswith('innodb_io_pattern   '):
                     #   innodb_io_pattern   0 	(0 + 0)
-                    row = [int(i) for i in re.findall('innodb_io_pattern   (\d+)', line)[0] if len(i) > 0]
+                    row = [int(i) for i in re.findall('innodb_io_pattern\s+(\d+)', line)[0] if len(i) > 0]
                     status['innodb_io_pattern_memory'] = row[0]
                 elif line.startswith('Buffer pool size '):
                     # The " " after size is necessary to avoid matching the wrong line:
                     # Buffer pool size        1769471
                     # Buffer pool size, bytes 28991012864
-                    row = [int(i) for i in re.findall('Buffer pool size        (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('Buffer pool size\s+(\d+)', line) if len(i) > 0]
                     status['pool_size'] = row[0]
                 elif line.startswith('Free buffers'):
                     # Free buffers            0
-                    row = [int(i) for i in re.findall('Free buffers            (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('Free buffers\s+(\d+)', line) if len(i) > 0]
                     status['free_pages'] = row[0]
                 elif line.startswith('Database pages'):
                     # Database pages          1696503
-                    row = [int(i) for i in re.findall('Database pages          (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('Database pages\s+(\d+)', line) if len(i) > 0]
                     status['database_pages'] = row[0]
                 elif line.startswith('Modified db pages'):
                     # Modified db pages       160602
-                    row = [int(i) for i in re.findall('Modified db pages       (\d+)', line) if len(i) > 0]
+                    row = [int(i) for i in re.findall('Modified db pages\s+(\d+)', line) if len(i) > 0]
                     status['modified_pages'] = row[0]
                 elif line.startswith('Pages read ahead'):
                     # Must do this BEFORE the next test, otherwise it'll get fooled by this
@@ -361,7 +361,7 @@ class MySQL_Monitor(object):
                     pass
                 elif line.startswith('Pages read'):
                     # Pages read 15240822, created 1770238, written 21705836
-                    row = [int(i) for i in re.findall('Pages read (\d+), created (\d+), written (\d+)', line)[0] if
+                    row = [int(i) for i in re.findall('Pages read\s+(\d+), created\s+(\d+), written\s+(\d+)', line)[0] if
                            len(i) > 0]
                     status['pages_read'] = row[0]
                     status['pages_created'] = row[1]
@@ -370,7 +370,7 @@ class MySQL_Monitor(object):
                 elif line.startswith('Number of rows inserted'):
                     # Number of rows inserted 50678311, updated 66425915, deleted 20605903, read 454561562
                     row = [int(i) for i in
-                           re.findall('Number of rows inserted (\d+), updated (\d+), deleted (\d+), read (\d+)', line)[
+                           re.findall('Number of rows inserted\s+(\d+), updated\s+(\d+), deleted\s+(\d+), read\s+(\d+)', line)[
                                0] if len(i) > 0]
                     status['rows_inserted'] = row[0]
                     status['rows_updated'] = row[0]
@@ -378,7 +378,7 @@ class MySQL_Monitor(object):
                     status['rows_read'] = row[0]
                 elif line.find(' queries inside InnoDB, ') != -1:
                     # 0 queries inside InnoDB, 0 queries in queue
-                    row = [int(i) for i in re.findall('(\d+) queries inside InnoDB, (\d+) queries in queue', line)[0] if
+                    row = [int(i) for i in re.findall('(\d+)\s+queries inside InnoDB, (\d+)\s+queries in queue', line)[0] if
                            len(i) > 0]
                     status['queries_inside'] = row[0]
                     status['queries_queued'] = row[1]
