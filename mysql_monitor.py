@@ -42,10 +42,6 @@ class MySQL_Monitor(object):
     # ]
 
     @classmethod
-    def discovery(cls):
-        pass
-
-    @classmethod
     def _get_innodb_status(cls, text):
         """
         analyze the output into innodb performance  when run command of  'show engine innodb status'
@@ -200,10 +196,10 @@ class MySQL_Monitor(object):
                 elif txn_seen and line.find('lock struct(s)') != -1:
                     # 23 lock struct(s), heap size 3024, undo log entries 27
                     # LOCK WAIT 12 lock struct(s), heap size 3024, undo log entries 5
-                    row = re.findall('(\d+) lock struct(s)', line)[0]
-                    status['innodb_lock_structs'] += int(row[0])
+                    row = re.findall('(\d+) lock struct\(s\)', line)[0]
+                    status['innodb_lock_structs'] += int(row)
                     if line.startswith('LOCK WAIT'):
-                        status['locked_transactions'] += row[0]
+                        status['locked_transactions'] += int(row)
                 # FILE I/O
                 elif line.find(' OS file reads, ') != -1:
                     # 8782182 OS file reads, 15635445 OS file writes, 947800 OS fsyncs
@@ -414,6 +410,7 @@ class MySQL_Monitor(object):
             count = cur.execute(query)
             result = cur.fetchall()
         except Exception as e:
+            traceback.print_exc()
             print e.message
         finally:
             cur.close()
@@ -428,7 +425,7 @@ class MySQL_Monitor(object):
         return target
 
     @classmethod
-    def get_monitor_data(cls, host=None, port=None, user=None, passwd=None):
+    def get_monitor_data(cls, host=None, port=None, user=None, passwd=None,socket=None):
         '''
         collect performance data from a mysql instance.
         the method is Modeled after Percona monitor plugin.
@@ -442,7 +439,10 @@ class MySQL_Monitor(object):
         :return: a dict with the mysql instance performace data
         '''
         try:
-            conn = MySQLdb.connect(host=host, port=int(port), user=user, passwd=passwd)
+            if socket:
+                conn = MySQLdb.connect(unix_socket=socket)
+            else:
+                conn = MySQLdb.connect(host=host, port=int(port), user=user, passwd=passwd)
         except Exception as e:
             print e.message
             return {}
@@ -563,14 +563,232 @@ class MySQL_Monitor(object):
                 # unflushed log bytes spikes a lot sometimes and it's impossible for it to
                 # be more than the log buffer.
                 status['unflushed_log'] = max([status['unflushed_log'], status['innodb_log_buffer_size']])
-            return status
+            # Define the variables to output.  I use shortened variable names so maybe
+            # it'll all fit in 1024 bytes for Cactid and Spine's benefit.  Strings must
+            # have some non-hex characters (non a-f0-9) to avoid a Cacti bug.  This list
+            # must come right after the word MAGIC_VARS_DEFINITIONS.  The Perl script
+            # parses it and uses it as a Perl variable.
+            exchange_keys={
+                      'Key_read_requests'           :  'gg',
+                      'Key_reads'                   :  'gh',
+                      'Key_write_requests'          :  'gi',
+                      'Key_writes'                  :  'gj',
+                      'history_list'                :  'gk',
+                      'innodb_transactions'         :  'gl',
+                      'read_views'                  :  'gm',
+                      'current_transactions'        :  'gn',
+                      'locked_transactions'         :  'go',
+                      'active_transactions'         :  'gp',
+                      'pool_size'                   :  'gq',
+                      'free_pages'                  :  'gr',
+                      'database_pages'              :  'gs',
+                      'modified_pages'              :  'gt',
+                      'pages_read'                  :  'gu',
+                      'pages_created'               :  'gv',
+                      'pages_written'               :  'gw',
+                      'file_fsyncs'                 :  'gx',
+                      'file_reads'                  :  'gy',
+                      'file_writes'                 :  'gz',
+                      'log_writes'                  :  'hg',
+                      'pending_aio_log_ios'         :  'hh',
+                      'pending_aio_sync_ios'        :  'hi',
+                      'pending_buf_pool_flushes'    :  'hj',
+                      'pending_chkp_writes'         :  'hk',
+                      'pending_ibuf_aio_reads'      :  'hl',
+                      'pending_log_flushes'         :  'hm',
+                      'pending_log_writes'          :  'hn',
+                      'pending_normal_aio_reads'    :  'ho',
+                      'pending_normal_aio_writes'   :  'hp',
+                      'ibuf_inserts'                :  'hq',
+                      'ibuf_merged'                 :  'hr',
+                      'ibuf_merges'                 :  'hs',
+                      'spin_waits'                  :  'ht',
+                      'spin_rounds'                 :  'hu',
+                      'os_waits'                    :  'hv',
+                      'rows_inserted'               :  'hw',
+                      'rows_updated'                :  'hx',
+                      'rows_deleted'                :  'hy',
+                      'rows_read'                   :  'hz',
+                      'Table_locks_waited'          :  'ig',
+                      'Table_locks_immediate'       :  'ih',
+                      'Slow_queries'                :  'ii',
+                      'Open_files'                  :  'ij',
+                      'Open_tables'                 :  'ik',
+                      'Opened_tables'               :  'il',
+                      'innodb_open_files'           :  'im',
+                      'open_files_limit'            :  'in',
+                      'table_cache'                 :  'io',
+                      'Aborted_clients'             :  'ip',
+                      'Aborted_connects'            :  'iq',
+                      'Max_used_connections'        :  'ir',
+                      'Slow_launch_threads'         :  'is',
+                      'Threads_cached'              :  'it',
+                      'Threads_connected'           :  'iu',
+                      'Threads_created'             :  'iv',
+                      'Threads_running'             :  'iw',
+                      'max_connections'             :  'ix',
+                      'thread_cache_size'           :  'iy',
+                      'Connections'                 :  'iz',
+                      'slave_running'               :  'jg',
+                      'slave_stopped'               :  'jh',
+                      'Slave_retried_transactions'  :  'ji',
+                      'slave_lag'                   :  'jj',
+                      'Slave_open_temp_tables'      :  'jk',
+                      'Qcache_free_blocks'          :  'jl',
+                      'Qcache_free_memory'          :  'jm',
+                      'Qcache_hits'                 :  'jn',
+                      'Qcache_inserts'              :  'jo',
+                      'Qcache_lowmem_prunes'        :  'jp',
+                      'Qcache_not_cached'           :  'jq',
+                      'Qcache_queries_in_cache'     :  'jr',
+                      'Qcache_total_blocks'         :  'js',
+                      'query_cache_size'            :  'jt',
+                      'Questions'                   :  'ju',
+                      'Com_update'                  :  'jv',
+                      'Com_insert'                  :  'jw',
+                      'Com_select'                  :  'jx',
+                      'Com_delete'                  :  'jy',
+                      'Com_replace'                 :  'jz',
+                      'Com_load'                    :  'kg',
+                      'Com_update_multi'            :  'kh',
+                      'Com_insert_select'           :  'ki',
+                      'Com_delete_multi'            :  'kj',
+                      'Com_replace_select'          :  'kk',
+                      'Select_full_join'            :  'kl',
+                      'Select_full_range_join'      :  'km',
+                      'Select_range'                :  'kn',
+                      'Select_range_check'          :  'ko',
+                      'Select_scan'                 :  'kp',
+                      'Sort_merge_passes'           :  'kq',
+                      'Sort_range'                  :  'kr',
+                      'Sort_rows'                   :  'ks',
+                      'Sort_scan'                   :  'kt',
+                      'Created_tmp_tables'          :  'ku',
+                      'Created_tmp_disk_tables'     :  'kv',
+                      'Created_tmp_files'           :  'kw',
+                      'Bytes_sent'                  :  'kx',
+                      'Bytes_received'              :  'ky',
+                      'innodb_log_buffer_size'      :  'kz',
+                      'unflushed_log'               :  'lg',
+                      'log_bytes_flushed'           :  'lh',
+                      'log_bytes_written'           :  'li',
+                      'relay_log_space'             :  'lj',
+                      'binlog_cache_size'           :  'lk',
+                      'Binlog_cache_disk_use'       :  'll',
+                      'Binlog_cache_use'            :  'lm',
+                      'binary_log_space'            :  'ln',
+                      'innodb_locked_tables'        :  'lo',
+                      'innodb_lock_structs'         :  'lp',
+                      'State_closing_tables'        :  'lq',
+                      'State_copying_to_tmp_table'  :  'lr',
+                      'State_end'                   :  'ls',
+                      'State_freeing_items'         :  'lt',
+                      'State_init'                  :  'lu',
+                      'State_locked'                :  'lv',
+                      'State_login'                 :  'lw',
+                      'State_preparing'             :  'lx',
+                      'State_reading_from_net'      :  'ly',
+                      'State_sending_data'          :  'lz',
+                      'State_sorting_result'        :  'mg',
+                      'State_statistics'            :  'mh',
+                      'State_updating'              :  'mi',
+                      'State_writing_to_net'        :  'mj',
+                      'State_none'                  :  'mk',
+                      'State_other'                 :  'ml',
+                      'Handler_commit'              :  'mm',
+                      'Handler_delete'              :  'mn',
+                      'Handler_discover'            :  'mo',
+                      'Handler_prepare'             :  'mp',
+                      'Handler_read_first'          :  'mq',
+                      'Handler_read_key'            :  'mr',
+                      'Handler_read_next'           :  'ms',
+                      'Handler_read_prev'           :  'mt',
+                      'Handler_read_rnd'            :  'mu',
+                      'Handler_read_rnd_next'       :  'mv',
+                      'Handler_rollback'            :  'mw',
+                      'Handler_savepoint'           :  'mx',
+                      'Handler_savepoint_rollback'  :  'my',
+                      'Handler_update'              :  'mz',
+                      'Handler_write'               :  'ng',
+                      'innodb_tables_in_use'        :  'nh',
+                      'innodb_lock_wait_secs'       :  'ni',
+                      'hash_index_cells_total'      :  'nj',
+                      'hash_index_cells_used'       :  'nk',
+                      'total_mem_alloc'             :  'nl',
+                      'additional_pool_alloc'       :  'nm',
+                      'uncheckpointed_bytes'        :  'nn',
+                      'ibuf_used_cells'             :  'no',
+                      'ibuf_free_cells'             :  'np',
+                      'ibuf_cell_count'             :  'nq',
+                      'adaptive_hash_memory'        :  'nr',
+                      'page_hash_memory'            :  'ns',
+                      'dictionary_cache_memory'     :  'nt',
+                      'file_system_memory'          :  'nu',
+                      'lock_system_memory'          :  'nv',
+                      'recovery_system_memory'      :  'nw',
+                      'thread_hash_memory'          :  'nx',
+                      'innodb_sem_waits'            :  'ny',
+                      'innodb_sem_wait_time_ms'     :  'nz',
+                      'Key_buf_bytes_unflushed'     :  'og',
+                      'Key_buf_bytes_used'          :  'oh',
+                      'key_buffer_size'             :  'oi',
+                      'Innodb_row_lock_time'        :  'oj',
+                      'Innodb_row_lock_waits'       :  'ok',
+                      'Query_time_count_00'         :  'ol',
+                      'Query_time_count_01'         :  'om',
+                      'Query_time_count_02'         :  'on',
+                      'Query_time_count_03'         :  'oo',
+                      'Query_time_count_04'         :  'op',
+                      'Query_time_count_05'         :  'oq',
+                      'Query_time_count_06'         :  'or',
+                      'Query_time_count_07'         :  'os',
+                      'Query_time_count_08'         :  'ot',
+                      'Query_time_count_09'         :  'ou',
+                      'Query_time_count_10'         :  'ov',
+                      'Query_time_count_11'         :  'ow',
+                      'Query_time_count_12'         :  'ox',
+                      'Query_time_count_13'         :  'oy',
+                      'Query_time_total_00'         :  'oz',
+                      'Query_time_total_01'         :  'pg',
+                      'Query_time_total_02'         :  'ph',
+                      'Query_time_total_03'         :  'pi',
+                      'Query_time_total_04'         :  'pj',
+                      'Query_time_total_05'         :  'pk',
+                      'Query_time_total_06'         :  'pl',
+                      'Query_time_total_07'         :  'pm',
+                      'Query_time_total_08'         :  'pn',
+                      'Query_time_total_09'         :  'po',
+                      'Query_time_total_10'         :  'pp',
+                      'Query_time_total_11'         :  'pq',
+                      'Query_time_total_12'         :  'pr',
+                      'Query_time_total_13'         :  'ps',
+                      'wsrep_replicated_bytes'      :  'pt',
+                      'wsrep_received_bytes'        :  'pu',
+                      'wsrep_replicated'            :  'pv',
+                      'wsrep_received'              :  'pw',
+                      'wsrep_local_cert_failures'   :  'px',
+                      'wsrep_local_bf_aborts'       :  'py',
+                      'wsrep_local_send_queue'      :  'pz',
+                      'wsrep_local_recv_queue'      :  'qg',
+                      'wsrep_cluster_size'          :  'qh',
+                      'wsrep_cert_deps_distance'    :  'qi',
+                      'wsrep_apply_window'          :  'qj',
+                      'wsrep_commit_window'         :  'qk',
+                      'wsrep_flow_control_paused'   :  'ql',
+                      'wsrep_flow_control_sent'     :  'qm',
+                      'wsrep_flow_control_recv'     :  'qn',
+                      'pool_reads'                  :  'qo',
+                      'pool_read_requests'          :  'qp',
+            }
+            for key in exchange_keys.keys():
+                if not status.has_key(key): continue
+                status[exchange_keys[key]]=status.pop(key)
         except Exception as e:
             traceback.print_exc()
             print e
         finally:
             if conn: conn.close()
             return status
-
 
 if __name__ == "__main__":
     import json
