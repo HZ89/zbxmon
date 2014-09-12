@@ -48,7 +48,7 @@ class ServiceMonitor(Monitor):
             discovery_func = partial(self._get_ip_port, self._get_bin_name(service))
         return self.get_discovery_data(macro_name_list, discovery_func)
 
-    def discovery_mysql(self):
+    def discovery_mysql(self,*args):
         import  os,psutil
         result = []
         for proc in [ i for i in psutil.process_iter() if i.name() == 'mysqld' ]:
@@ -56,10 +56,14 @@ class ServiceMonitor(Monitor):
             if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
                 listen[0] = self.local_ip
             sock_path = os.path.join(proc.cwd(), 'mysql.sock')
-            result.append([str(listen[0]), str(listen[1]), sock_path])
+            if MySQL_Monitor.mysql_ping(host=str(listen[0]),port=int(listen[1]),user=args[0],passwd=args[1]) == -1:
+                res=MySQL_Monitor.grant_monitor_user(socket=sock_path,user=args[0],host=str(listen[0]),passwd=args[1])
+            result.append([str(listen[0]), str(listen[1])])
         return result
-    def get_mysql_data(self,instance_name=''):
-        return MySQL_Monitor.get_monitor_data(socket=instance_name)
+    def get_mysql_data(self,instance_name='',*args):
+        host,port=instance_name.split(':') if instance_name.find(':') != -1 else ('','')
+        user,passwd,socket= ('','',args[0]) if len(args)==1 else [args[0],args[1],None] if len(args)==2 else [None,None,None]
+        return MySQL_Monitor.get_monitor_data(host=host,port=port,user=user,passwd=passwd,socket=socket)
 
 
     def get_memcache_data(self, instance_name):

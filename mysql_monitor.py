@@ -423,7 +423,40 @@ class MySQL_Monitor(object):
             if type(target[key]) is str and target[key].isdigit():
                 target[key] = int(target[key])
         return target
-
+    @classmethod
+    def mysql_ping(cls,host,port,user,passwd):
+        result=0
+        conn=None
+        try:
+            conn=MySQLdb.connect(host=host,port=port,user=user,passwd=passwd)
+            conn.ping()
+        except (MySQLdb.MySQLError,MySQLdb.Error,MySQLdb.InterfaceError,MySQLdb.NotSupportedError,Exception) as e:
+            print e.message
+            # operationerror: not allowed to connect
+            result=-1
+        finally:
+            if conn: conn.close()
+        return result
+    @classmethod
+    def grant_monitor_user(self,socket,user,host,passwd):
+        result=0
+        conn=None
+        cur=None
+        try:
+            conn=MySQLdb.connect(unix_socket=socket)
+            cur=conn.cursor()
+            count=cur.execute("GRANT PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' WITH MAX_USER_CONNECTIONS 5;flush privileges" % (user,host,passwd))
+            result =1
+        except (MySQLdb.MySQLError,MySQLdb.Error,MySQLdb.InterfaceError,MySQLdb.NotSupportedError) as e:
+            print e.message
+            result=-1
+        except MySQLdb.OperationalError as e:
+            result =-2
+            print e.message
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+        return result
     @classmethod
     def get_monitor_data(cls, host=None, port=None, user=None, passwd=None,socket=None):
         '''
@@ -443,6 +476,8 @@ class MySQL_Monitor(object):
                 conn = MySQLdb.connect(unix_socket=socket)
             else:
                 conn = MySQLdb.connect(host=host, port=int(port), user=user, passwd=passwd)
+        except (MySQLdb.MySQLError,MySQLdb.DatabaseError,MySQLdb.Error) as e:
+            print e.message
         except Exception as e:
             print e.message
             return {}
@@ -488,11 +523,26 @@ class MySQL_Monitor(object):
             res = cls._run_query("SHOW VARIABLES", conn)
             if res and len(res) > 0:
                 status.update(cls._change_dict_value_to_int(dict(res)))
+            # slave-running
+            # slave-lag
+            # slave-stopped
+            # slave-running
+            # relay-log-space
+            #
             res = cls._run_query("show slave status", conn, DictCursor)
             if res and len(res) > 0:
-                status.update(cls._change_dict_value_to_int(res[0]))
+                # Must lowercase keys because different MySQL versions have different lettercase.
+                slave_status={ key.lower():val for key,val in res[0].iteritems()}
+                status.update(cls._change_dict_value_to_int(slave_status))
+                status['slave_lag']=status['seconds_behind_master']
                 status['slave_running'] = status['slave_lag'] if status['slave_sql_running'] == 'YES' else 0
                 status['slave_stopped'] = 0 if status['slave_sql_running'] else status['slave_lag']
+            else:
+                status['slave_lag']=0
+                status['slave_running']=0
+                status['slave_stopped']=0
+                status['slave_sql_running']='NULL'
+                status['relay_log_space']=0
             res = cls._run_query("SHOW MASTER LOGS", conn)
             if res and len(res) > 0:
                 status['binary_log_space'] = sum([int(i[1]) for i in res])
@@ -547,10 +597,16 @@ class MySQL_Monitor(object):
                     conn)
                 if res and len(res) > 0:
                     rn = len(res)
-                    for offset in range(13):
+                    for offset in range(0,14):
                         item = res[offset] if offset < rn else [0, 0]
                         status["Query_time_count_%02d" % offset] = int(item[0])
                         status["Query_time_total_%02d" % offset] = int(item[1])
+            else:
+            # fill zero to query_time
+            # TODO: use "select benchmark(10000, 1+1) " to calcute response time on no percona mysql
+                for offset in range(0,14):
+                    status["Query_time_count_%02d" % offset] = 0
+                    status["Query_time_total_%02d" % offset] = 0
             # Make table_open_cache backwards-compatible (issue 63).
             if status.has_key('table_open_cache'):
                 status['table_cache'] = status['table_open_cache']
