@@ -29,10 +29,10 @@ class ServiceMonitor(Monitor):
         """
         get_func_name = 'get_{}_data'.format(service)
         if hasattr(self, get_func_name):
-            get_func = getattr(self, get_func_name)
+            get_func = partial(getattr(self, get_func_name), instance)
             #add args
             if args:
-                get_func = partial(get_func, instance, *args)
+                get_func = partial(get_func, *args)
         else:
             raise AttributeError('have no func named {}'.format(get_func_name))
         return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
@@ -44,6 +44,7 @@ class ServiceMonitor(Monitor):
         else:
             discovery_func = partial(self._get_ip_port, self._get_bin_name(service))
         return self.get_discovery_data(macro_name_list, discovery_func)
+
     def discovery_mysql(self):
         import  os,psutil
         result = []
@@ -76,14 +77,14 @@ class ServiceMonitor(Monitor):
         return memcached_status
 
 
-    def get_mongodb_data(self, mongo_user, mongo_passwd,instance_name):
+    def get_mongodb_data(self, instance_name, mongo_user, mongo_passwd):
         """
         the func used to get mongodb data
         @param instance_name: the ip:port of mongodb
         @return: dict
         """
         import pymongo
-        uri = "mongodb://{}@{}:{}/admin".format(instance_name, mongo_user, mongo_passwd)
+        uri = "mongodb://{}:{}@{}/admin".format(mongo_user, mongo_passwd, instance_name)
         db = pymongo.MongoClient(uri)
         coll = db.admin
         status = coll.command('serverStatus', 1)
