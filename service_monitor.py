@@ -18,7 +18,7 @@ class ServiceMonitor(Monitor):
     def _get_bin_name(self, service):
         return BIN[service]
 
-    def load_data(self, service, instance,  item=None , *args):
+    def load_data(self, service, instance,  item=None, *args):
         """
         auto load func to get monitor data
         @param service: the name of service
@@ -38,10 +38,12 @@ class ServiceMonitor(Monitor):
             raise AttributeError('have no func named {}'.format(get_func_name))
         return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
 
-    def discovery(self,service,macro_name_list):
+    def discovery(self,service, macro_name_list, *args):
         discovery_func_name = 'discovery_{}'.format(service)
         if hasattr(self, discovery_func_name):
             discovery_func = getattr(self, discovery_func_name)
+            if args:
+                discovery_func = partial(discovery_func, *args)
         else:
             discovery_func = partial(self._get_ip_port, self._get_bin_name(service))
         return self.get_discovery_data(macro_name_list, discovery_func)
@@ -202,7 +204,7 @@ def main(args):
     if args.extend:
         arg_list = args.extend.split(',')
     if args.discovery:
-        print monitor.discovery(args.service,args.macros.split(','))
+        print monitor.discovery(args.service,args.macros.split(','), *arg_list)
     else:
         print monitor.load_data(args.service, args.instance,  args.item,  *arg_list)
 
