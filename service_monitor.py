@@ -29,6 +29,7 @@ class ServiceMonitor(Monitor):
         """
         get_func_name = 'get_{}_data'.format(service)
         if hasattr(self, get_func_name):
+            #find the func, and add instance as the first arg
             get_func = partial(getattr(self, get_func_name), instance)
             #add args
             if args:
