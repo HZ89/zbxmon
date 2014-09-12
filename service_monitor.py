@@ -1,3 +1,4 @@
+#!/opt/17173_install/python-2.7.6/bin/python2.7
 __author__ = 'Harrison'
 from Monitor import Monitor
 from functools import partial
@@ -42,10 +43,19 @@ class ServiceMonitor(Monitor):
         else:
             discovery_func = partial(self._get_ip_port, self._get_bin_name(service))
         return self.get_discovery_data(macro_name_list, discovery_func)
+    def discovery_mysql(self):
+        import  os,psutil
+        result = []
+        for proc in [ i for i in psutil.process_iter() if i.name() == 'mysqld' ]:
+            listen = list(sorted([ laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN' ])[0])
+            if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
+                listen[0] = self.local_ip
+            sock_path = os.path.join(proc.cwd(), 'mysql.sock')
+            result.append([str(listen[0]), str(listen[1]), sock_path])
+        return result
+    def get_mysql_data(self,instance_name=''):
+        return MySQL_Monitor.get_monitor_data(socket=instance_name)
 
-    def get_mysql_data(self,user,passwd,instance_name):
-        host,port=instance_name.split(':')
-        return MySQL_Monitor.get_monitor_data(host=host,port=port,user=user,passwd=passwd)
 
     def get_memcache_data(self, instance_name):
         """
@@ -166,12 +176,13 @@ class ServiceMonitor(Monitor):
         return r.info()
 
 
-@arg('--discovery', '-D', default=False, required=True, help='Discovery the service instance and return json data')
+@arg('--discovery', '-D', default=False, required=False, help='Discovery the service instance and return json data')
 @arg('--service', '-S', required=True, help='the service name of monitor')
 @arg('--instance', '-I', help='the name of the instance you want')
 @arg('--item', '-K', help='the item of you want')
 @arg('--macros', '-M', help='the macro list, used to build discovery data eg:p1,p2,p3')
 @arg('--extend', '-E', help='extend args eg. p,p1,p2')
+@arg('--cache', '-C', help='cache path')
 def main(args):
     """
 
@@ -183,10 +194,9 @@ def main(args):
     else:
         assert not args.instance is None, 'must have instance'
         assert not args.item is None, 'must have item'
-    monitor = ServiceMonitor(args.service)
+    monitor = ServiceMonitor(args.service,cache_path=args.cache if args.cache else None)
     arg_list = []
     if args.extend:
-        assert args.extend.find(',') == 1, "extend must split by ','"
         arg_list = args.extend.split(',')
     if args.discovery:
         print monitor.discovery(args.service,args.macros.split(','))

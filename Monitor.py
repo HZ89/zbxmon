@@ -16,7 +16,7 @@ from re import search
 
 
 class Monitor(object):
-    def __init__(self, app):
+    def __init__(self, app,cache_path=None):
 
         """
         @param app: type of str, name of your monitor app
@@ -27,23 +27,10 @@ class Monitor(object):
         self._app = app
         self._result = {'data': []}
         self._fs = ':'
-        self._cache_file_path = os.getenv('TMPDIR', '/tmp') + '/' + hashlib.md5(
-            os.uname()[1] + self._app).hexdigest() + '_monitor.tmp'
+        self._cache_file_path = os.path.join(cache_path if cache_path and os.path.exists(cache_path) else os.getenv('TMPDIR', '/tmp'),
+                                             hashlib.md5(os.uname()[1] + self._app).hexdigest() + '_monitor.tmp')
+        self.local_ip=self._get_local_ip()
 
-        #look for the local private ip
-        addresses = []
-        for iface_name in interfaces():
-            addresses.append([i['addr'] for i in
-                              ifaddresses(iface_name).setdefault(AF_INET, [{'addr': 'NO IP addr'}])][0])
-        for ips in sorted(addresses):
-            if search('^(?:10|172|192)\.'
-                      '(?:(?<=192\.)168|(?<=172\.)(?:(?:1[6-9])|(?:2\d)|(?:3[0-1]))|'
-                      '(?:(?<=10\.)(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))))\.'
-                      '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))\.'
-                      '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))$',
-                ips):
-                self._local_ip = ips
-                break
 
         try:
             self._cache_file = open(self._cache_file_path, "r+")
@@ -56,6 +43,23 @@ class Monitor(object):
 #            self._make_cahe()
 #            self._cache_file.flush()
 
+    def _get_local_ip(cls):
+        #look for the local private ip
+        addresses = []
+        for iface_name in interfaces():
+            addresses.append([i['addr'] for i in
+                              ifaddresses(iface_name).setdefault(AF_INET, [{'addr': 'NO IP addr'}])][0])
+        local_ip='0.0.0.0'
+        for ips in sorted(addresses):
+            if search('^(?:10|172|192)\.'
+                      '(?:(?<=192\.)168|(?<=172\.)(?:(?:1[6-9])|(?:2\d)|(?:3[0-1]))|'
+                      '(?:(?<=10\.)(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))))\.'
+                      '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))\.'
+                      '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))$',
+                ips):
+                local_ip = ips
+                break
+        return  local_ip
     def __del__(self):
         """
         use to free the lock
@@ -159,7 +163,7 @@ class Monitor(object):
 
         self._cache_file.seek(0)
         self._cache_file.truncate()
-        self._cache_file.write(json.dumps(self._data))
+        self._cache_file.write(json.dumps(self._data,indent=4,sort_keys=True))
         self._cache_file.flush()
 
     # def _search_ip_port_from_proc(self):
@@ -193,7 +197,7 @@ class Monitor(object):
         for proc in [ i for i in psutil.process_iter() if i.name() == service ]:
             listen = list(sorted([ laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN' ])[0])
             if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
-                listen[0] = self._local_ip
+                listen[0] = self.local_ip
             result.append([str(listen[0]), str(listen[1])])
         return result
 
