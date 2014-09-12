@@ -112,7 +112,7 @@ class Monitor(object):
         if get_monitor_data_func:
             assert hasattr(get_monitor_data_func, '__call__'), 'get_monitor_data must can be callable'
         else:
-            get_monitor_data_func = self._get_instance_info()
+            get_monitor_data_func = partial(self._get_instance_info, instance)
 
         if self._is_cache_exist():
 #            instance_list = [ self._fs.join([i[0], i[1]]) for i in self._get_instance_list() ]
@@ -120,7 +120,7 @@ class Monitor(object):
             if self._data['file_info']['file'] == self._data['file_info'][key]:
                 monitor_data = {}
 #                for instance_name in instance_list:
-                monitor_data[instance] = get_monitor_data_func(instance)
+                monitor_data[instance] = get_monitor_data_func()
                 self._make_cache(monitor_data, instance, item)
                 return monitor_data[instance][item]
             else:
@@ -133,7 +133,7 @@ class Monitor(object):
                 return self._data[instance][item]
         else:
             monitor_data = {}
-            monitor_data[instance] = get_monitor_data_func(instance)
+            monitor_data[instance] = get_monitor_data_func()
             self._make_cache(monitor_data, instance, item)
             return monitor_data[instance][item]
 

@@ -6,6 +6,7 @@ from argh import ArghParser, arg
 import argparse
 from mysql_monitor import MySQL_Monitor
 
+#TODO:Completion script comments
 BIN={
     'mysql': 'mysqld',
     'redis':'redis-server',
@@ -31,7 +32,7 @@ class ServiceMonitor(Monitor):
             get_func = getattr(self, get_func_name)
             #add args
             if args:
-                get_func = partial(get_func, *args)
+                get_func = partial(get_func, instance, *args)
         else:
             raise AttributeError('have no func named {}'.format(get_func_name))
         return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
