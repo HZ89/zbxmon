@@ -1,6 +1,6 @@
 #!/opt/17173_install/python-2.7.6/bin/python2.7
 __author__ = 'Harrison'
-from Monitor import Monitor
+from monitor import Monitor
 from functools import partial
 from argh import ArghParser, arg
 import argparse
@@ -38,6 +38,27 @@ class ServiceMonitor(Monitor):
             raise AttributeError('have no func named {}'.format(get_func_name))
         return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
 
+    def load_keys(self, service, instance,  *args):
+        """
+        auto load func to get monitor data
+        @param service: the name of service
+        @param instance: string of the instance like ip:port or /dev/sda etc.
+        @param is_discovery: is a zabbix low level discovery action
+        @param args: other args like the args of func get_XXX_data
+        @return: string
+        """
+        get_func_name = 'get_{}_data'.format(service)
+        if hasattr(self, get_func_name):
+            #find the func, and add instance as the first arg
+            get_func = partial(getattr(self, get_func_name), instance)
+            #add args
+            if args:
+                get_func = partial(get_func, *args)
+        else:
+            raise AttributeError('have no func named {}'.format(get_func_name))
+        keys=self.get_keys(instance=instance,  get_monitor_data_func=get_func)
+        return keys
+
     def discovery(self,service, macro_name_list, *args):
         discovery_func_name = 'discovery_{}'.format(service)
         if hasattr(self, discovery_func_name):
@@ -61,7 +82,7 @@ class ServiceMonitor(Monitor):
             result.append([str(listen[0]), str(listen[1])])
         return result
     def get_mysql_data(self,instance_name='',*args):
-        host,port=instance_name.split(':') if instance_name.find(':') != -1 else ('','')
+        host,port=instance_name.split('/') if instance_name.find('/') != -1 else ('','')
         user,passwd,socket= ('','',args[0]) if len(args)==1 else [args[0],args[1],None] if len(args)==2 else [None,None,None]
         return MySQL_Monitor.get_monitor_data(host=host,port=port,user=user,passwd=passwd,socket=socket)
 
@@ -73,6 +94,7 @@ class ServiceMonitor(Monitor):
         @return: dict
         """
         import memcache
+        instance_name=str(instance_name).replace('/',':')
         conn = memcache.Client([instance_name], debug=0)
         memcached_status = conn.get_stats()[0][1]
         total = int(memcached_status['get_hits']) + int(memcached_status['get_misses'])
@@ -91,6 +113,7 @@ class ServiceMonitor(Monitor):
         @return: dict
         """
         import pymongo
+        instance_name=str(instance_name).replace('/',':')
         uri = "mongodb://{}:{}@{}/admin".format(mongo_user, mongo_passwd, instance_name)
         db = pymongo.MongoClient(uri)
         coll = db.admin
@@ -149,15 +172,15 @@ class ServiceMonitor(Monitor):
 
         for redis_process in [ x
                      for x in psutil.process_iter()
-                     if re.search(r"redis-server(-\d*)?$",
+                     if len(x.cmdline())>0 and  re.search(r"redis-server(-\d*)?$",
                                   os.path.basename(x.cmdline()[0])) ]:
             redis_ip, redis_port = sorted([ laddr.laddr
                                             for laddr in redis_process.get_connections()
                                             if laddr.status == 'LISTEN' ])[0]
-            redis_passwd = 'N/A'
+            redis_passwd = ''
             if os.path.isfile(redis_process.cmdline()[1]):
                 with open(redis_process.cmdline()[1], 'r') as f:
-                    for line in f.read():
+                    for line in f.readlines():
                         if re.search('^requirepass', line):
                             redis_passwd = line.split()[1]
             else:
@@ -171,7 +194,7 @@ class ServiceMonitor(Monitor):
             redises.append([redis_ip, redis_port, redis_passwd])
         return redises
 
-    def get_redis_data(self, instance_name):
+    def get_redis_data(self, instance_name,*args):
         """
         get monitor data from redis
         @param instance_name: ip:port:passwd
@@ -179,7 +202,7 @@ class ServiceMonitor(Monitor):
         """
         import redis
 
-        ip, port, passwd = instance_name.split(':')
+        ip, port ,passwd= instance_name.split('/')
         r = redis.StrictRedis(host=ip, port=port, password=passwd)
 
         return r.info()
@@ -192,6 +215,7 @@ class ServiceMonitor(Monitor):
 @arg('--macros', '-M', help='the macro list, used to build discovery data eg:p1,p2,p3')
 @arg('--extend', '-E', help='extend args eg. p,p1,p2')
 @arg('--cache', '-C', help='cache path')
+@arg('--list','-L',default=False,help='list monitor items for this instance')
 def main(args):
     """
 
@@ -202,15 +226,22 @@ def main(args):
         assert not args.macros is None, 'must have macros'
     else:
         assert not args.instance is None, 'must have instance'
-        assert not args.item is None, 'must have item'
+     #   assert not args.item is None, 'must have item'
     monitor = ServiceMonitor(args.service,cache_path=args.cache if args.cache else None)
     arg_list = []
+    macro_list=[]
     if args.extend:
-        arg_list = args.extend.split(',')
+        arg_list =args.extend.split('/')
+
     if args.discovery:
-        print monitor.discovery(args.service,args.macros.split(','), *arg_list)
+        print monitor.discovery(args.service,args.macros.split('/'), *arg_list)
     else:
-        print monitor.load_data(args.service, args.instance,  args.item,  *arg_list)
+        if args.item:
+            print monitor.load_data(args.service, args.instance,  args.item,  *arg_list)
+        if args.list:
+            print "Monitor Items (in %s)" % args.instance
+            for it in monitor.load_keys(args.service,args.instance,*arg_list):
+                print it
 
 
 if __name__ == '__main__':

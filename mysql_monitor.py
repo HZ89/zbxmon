@@ -836,9 +836,11 @@ class MySQL_Monitor(object):
                       'pool_reads'                  :  'qo',
                       'pool_read_requests'          :  'qp',
             }
-            for key in exchange_keys.keys():
-                if not status.has_key(key): continue
-                status[exchange_keys[key]]=status.pop(key)
+            # for key in exchange_keys.keys():
+            #     if not status.has_key(key): continue
+            #     status[exchange_keys[key]]=status.pop(key)
+            for key in status.keys():
+                status[str(key).lower()]=status.pop(key)
         except Exception as e:
             traceback.print_exc()
             print e
