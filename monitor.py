@@ -166,26 +166,6 @@ class Monitor(object):
         self._cache_file.write(json.dumps(self._data,indent=4,sort_keys=True))
         self._cache_file.flush()
 
-    # def _search_ip_port_from_proc(self):
-    #     '''
-    #     the default func for getting instances list
-    #     @return: list
-    #     '''
-    #     pid_with_ip_port_list = []
-    #     if not isinstance(self._regular, str):
-    #         raise ValueError("regular must be a str now is %s" % type(self._regular))
-    #     for proc in psutil.process_iter():
-    #         try:
-    #             if re.search(r"%s" % self._regular, os.path.basename(proc.cmdline()[0])):
-    #                 listen = [laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN']
-    #                 for ip, port in listen:
-    #                     if ip == '0.0.0.0' or ip == '::' or ip == '':
-    #                         ip = self._local_ip
-    #                     pid_with_ip_port_list.append([ip, port, proc.pid])
-    #         except IndexError:
-    #             pass
-    #     return pid_with_ip_port_list
-
     def _get_ip_port(self, service):
         """
         cut ip,port from proc
