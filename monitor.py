@@ -122,7 +122,7 @@ class Monitor(object):
 #                for instance_name in instance_list:
                 monitor_data[instance] = get_monitor_data_func()
                 self._make_cache(monitor_data, instance, item)
-                return monitor_data[instance][item]
+            #    return monitor_data[instance][item]
             else:
                 #update key version
                 self._data['file_info'][key] = self._data['file_info']['file']
@@ -130,12 +130,36 @@ class Monitor(object):
                 self._cache_file.truncate()
                 self._cache_file.write(json.dumps(self._data))
                 self._cache_file.flush()
-                return self._data[instance][item]
+            #    return self._data[instance][item]
         else:
             monitor_data = {}
             monitor_data[instance] = get_monitor_data_func()
             self._make_cache(monitor_data, instance, item)
-            return monitor_data[instance][item]
+        #    return monitor_data[instance][item]
+        return self._data[instance][item]
+
+    def get_keys(self, instance,  get_monitor_data_func=None):
+        """
+        get item data from instance
+        @param instance: the instance you want get data
+        @param item: which monitor item you want get from the instance
+        @param get_monitor_data_func: this func used for get monitor data from each instances
+        @return:
+        """
+
+        if get_monitor_data_func:
+            assert hasattr(get_monitor_data_func, '__call__'), 'get_monitor_data must can be callable'
+        else:
+            get_monitor_data_func = partial(self._get_instance_info, instance)
+
+        if not self._is_cache_exist():
+            monitor_data = {}
+#                for instance_name in instance_list:
+            monitor_data[instance] = get_monitor_data_func()
+            self._make_cache(monitor_data, instance, '')
+        #    return monitor_data[instance][item]
+
+        return [] if not self._data.has_key(instance) else list(sorted(self._data[instance].keys()))
 
     def _make_cache(self, data, instance, item):
         """

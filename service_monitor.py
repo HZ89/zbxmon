@@ -156,6 +156,8 @@ class ServiceMonitor(Monitor):
         mongo_status.update({'dur_timeMs_writerToJournal': status['dur']['timeMs']['writeToJournal']})
         mongo_status.update({'dur_timeMs_writerToDataFiles': status['dur']['timeMs']['writeToDataFiles']})
 
+        for key in mongo_status.keys():
+            mongo_status[key.lower()]=mongo_status.pop(key)
         return mongo_status
 
 

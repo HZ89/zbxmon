@@ -471,14 +471,18 @@ class MySQL_Monitor(object):
         :param passwd: login password
         :return: a dict with the mysql instance performace data
         '''
+        conn=None
         try:
             if socket:
                 conn = MySQLdb.connect(unix_socket=socket)
             else:
                 conn = MySQLdb.connect(host=host, port=int(port), user=user, passwd=passwd)
         except (MySQLdb.MySQLError,MySQLdb.DatabaseError,MySQLdb.Error) as e:
+            traceback.print_exc()
             print e.message
+            return {}
         except Exception as e:
+            traceback.print_exc()
             print e.message
             return {}
         try:
@@ -852,5 +856,5 @@ if __name__ == "__main__":
     import json
 
     print json.dumps(
-        MySQL_Monitor.get_data(host=sys.argv[1], port=int(sys.argv[2]), user=sys.argv[3], passwd=sys.argv[4]), indent=4,
+        MySQL_Monitor.get_monitor_data(host=sys.argv[1], port=int(sys.argv[2]), user=sys.argv[3], passwd=sys.argv[4]), indent=4,
         sort_keys=True)
