@@ -7,16 +7,14 @@ import os
 import hashlib
 import time
 import psutil
-import types
 from netifaces import interfaces, ifaddresses, AF_INET
 from functools import partial
 from fcntl import LOCK_EX, LOCK_UN
 from re import search
 
 
-
 class Monitor(object):
-    def __init__(self, app,cache_path=None):
+    def __init__(self, app, cache_path=None):
 
         """
         @param app: type of str, name of your monitor app
@@ -26,11 +24,11 @@ class Monitor(object):
         self._data = {'file_info': {'file': 'default'}}
         self._app = app
         self._result = {'data': []}
-        self._fs = ':'
-        self._cache_file_path = os.path.join(cache_path if cache_path and os.path.exists(cache_path) else os.getenv('TMPDIR', '/tmp'),
-                                             hashlib.md5(os.uname()[1] + self._app).hexdigest() + '_monitor.tmp')
-        self.local_ip=self._get_local_ip()
-
+        # self._fs = ':'
+        self._cache_file_path = os.path.join(
+            cache_path if cache_path and os.path.exists(cache_path) else os.getenv('TMPDIR', '/tmp'),
+            hashlib.md5(os.uname()[1] + self._app).hexdigest() + '_monitor.tmp')
+        self.local_ip = self._get_local_ip()
 
         try:
             self._cache_file = open(self._cache_file_path, "r+")
@@ -39,27 +37,26 @@ class Monitor(object):
         except (IOError, ValueError):
             self._cache_file = open(self._cache_file_path, "w+")
             fcntl.lockf(self._cache_file.fileno(), LOCK_EX)
-#            self._cache_file.write(str(json.dumps(self._data)))
-#            self._make_cahe()
-#            self._cache_file.flush()
 
+    @classmethod
     def _get_local_ip(cls):
-        #look for the local private ip
+        # look for the local private ip
         addresses = []
         for iface_name in interfaces():
             addresses.append([i['addr'] for i in
                               ifaddresses(iface_name).setdefault(AF_INET, [{'addr': 'NO IP addr'}])][0])
-        local_ip='0.0.0.0'
+        local_ip = '0.0.0.0'
         for ips in sorted(addresses):
             if search('^(?:10|172|192)\.'
                       '(?:(?<=192\.)168|(?<=172\.)(?:(?:1[6-9])|(?:2\d)|(?:3[0-1]))|'
                       '(?:(?<=10\.)(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))))\.'
                       '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))\.'
                       '(?:(?:25[0-5])|(?:2[0-5]\d)|(?:1?\d{1,2}))$',
-                ips):
+                      ips):
                 local_ip = ips
                 break
-        return  local_ip
+        return local_ip
+
     def __del__(self):
         """
         use to free the lock
@@ -69,7 +66,7 @@ class Monitor(object):
         if not self._cache_file is None:
             self._cache_file.close()
 
-    #def __enter__(self):    # In testing
+    # def __enter__(self):    # In testing
     #    return self
     #
     #def __exit__(self, exc_type, exc_val, exc_tb):    # In testing
@@ -91,13 +88,13 @@ class Monitor(object):
 
         return False
 
-    def _get_instance_list_from_cache(self):
-        """
-        get instance list from cache
-        @return: list
-        """
-        return self._data['discovery']
-#       return  [ x.split(self._fs) for x in self._data.keys() if x != 'file_info' ]
+    #     def _get_instance_list_from_cache(self):
+    #         """
+    #         get instance list from cache
+    #         @return: list
+    #         """
+    #         return self._data['discovery']
+    #         return  [ x.split(self._fs) for x in self._data.keys() if x != 'file_info' ]
 
 
     def get_item(self, instance, item, get_monitor_data_func=None):
@@ -133,7 +130,7 @@ class Monitor(object):
 
         return self._data[instance][item]
 
-    def get_keys(self, instance,  get_monitor_data_func=None):
+    def get_keys(self, instance, get_monitor_data_func=None):
         """
         get item data from instance
         @param instance: the instance you want get data
@@ -148,7 +145,7 @@ class Monitor(object):
 
         if not self._is_cache_exist():
             monitor_data = {}
-#                for instance_name in instance_list:
+            #                for instance_name in instance_list:
             monitor_data[instance] = get_monitor_data_func()
             self._make_cache(monitor_data)
         #    return monitor_data[instance][item]
@@ -169,7 +166,7 @@ class Monitor(object):
             self._data['file_info'][instance + '_' + item] = self._data['file_info']['file']
             self._cache_file.seek(0)
             self._cache_file.truncate()
-            self._cache_file.write(json.dumps(self._data,indent=4,sort_keys=True))
+            self._cache_file.write(json.dumps(self._data, indent=4, sort_keys=True))
             self._cache_file.flush()
 
     def _make_cache(self, data):
@@ -199,44 +196,46 @@ class Monitor(object):
 
         self._cache_file.seek(0)
         self._cache_file.truncate()
-        self._cache_file.write(json.dumps(self._data,indent=4,sort_keys=True))
+        self._cache_file.write(json.dumps(self._data, indent=4, sort_keys=True))
         self._cache_file.flush()
 
-    def _get_ip_port(self, service):
+    @classmethod
+    def _get_ip_port(cls, proc_name):
         """
         cut ip,port from proc
-        @param service: the process name you want
+        @param proc_name: the process name you want
         @return: list
         """
 
         result = []
-        for proc in [ i for i in psutil.process_iter() if i.name() == service ]:
-            listen = list(sorted([ laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN' ])[0])
+        for proc in [i for i in psutil.process_iter() if i.name() == proc_name]:
+            listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
             if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
-                listen[0] = self.local_ip
+                listen[0] = Monitor._get_local_ip()
             result.append([str(listen[0]), str(listen[1])])
         return result
 
-    def _get_instance_list(self, procname=None, is_discovery=None, discovery_func=None):
-        """
-        use the func discovery_func get instances
-        @param is_discovery: bool
-        @param discovery_func: the func how to get instaces
-        @param procname: arg for self._get_ip_port
-        @return: list
-        """
-        if not discovery_func:
-            get_instance_func = partial(self._get_ip_port, procname)
-        else:
-            get_instance_func = discovery_func
+    # def _get_instance_list(self, procname=None, is_discovery=None, discovery_func=None):
+    #     """
+    #     use the func discovery_func get instances
+    #     @param is_discovery: bool
+    #     @param discovery_func: the func how to get instaces
+    #     @param procname: arg for self._get_ip_port
+    #     @return: list
+    #     """
+    #     if not discovery_func:
+    #         get_instance_func = partial(self._get_ip_port, procname)
+    #     else:
+    #         get_instance_func = discovery_func
+    #
+    #     if is_discovery or not self._is_cache_exist():
+    #         instance_list = get_instance_func()
+    #     else:
+    #         instance_list = self._get_instance_list_from_cache()
+    #     return instance_list
 
-        if is_discovery or not self._is_cache_exist():
-            instance_list = get_instance_func()
-        else:
-            instance_list = self._get_instance_list_from_cache()
-        return instance_list
-
-    def get_discovery_data(self, attribute_name_list, discovery_func=None, procname=None):
+    @classmethod
+    def get_discovery_data(cls, attribute_name_list, discovery_func=None, procname=None):
         """
         format data to json which Zabbix LLD wanted
         if the number of attribute which get_instance_list return more then attribute_name_list,
@@ -247,13 +246,13 @@ class Monitor(object):
         @return: json data
         """
         result = {'data': []}
+        assert discovery_func or procname, 'must give a discovery_func or procname'
 
         if discovery_func:
             assert hasattr(discovery_func, '__call__'), 'discovery_func must can be callable'
-
-        data = self._get_instance_list(is_discovery=True, discovery_func=discovery_func, procname=procname)
-
-        self._make_cache({'discovery': data})
+            data = discovery_func()
+        else:
+            data = Monitor._get_ip_port(procname)
 
         for instance in data:
             tmp_dict = {}
