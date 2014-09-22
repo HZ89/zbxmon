@@ -115,34 +115,28 @@ class Monitor(object):
             get_monitor_data_func = partial(self._get_instance_info, instance)
 
         if self._is_cache_exist():
-#            instance_list = [ self._fs.join([i[0], i[1]]) for i in self._get_instance_list() ]
             key = instance + '_' + item
             if self._data['file_info']['file'] == self._data['file_info'][key]:
                 monitor_data = {}
-#                for instance_name in instance_list:
                 monitor_data[instance] = get_monitor_data_func()
-                self._make_cache(monitor_data, instance, item)
-            #    return monitor_data[instance][item]
+                self._update_version(instance, item, monitor_data[instance].keys())
+                self._make_cache(monitor_data)
+
             else:
                 #update key version
-                self._data['file_info'][key] = self._data['file_info']['file']
-                self._cache_file.seek(0)
-                self._cache_file.truncate()
-                self._cache_file.write(json.dumps(self._data))
-                self._cache_file.flush()
-            #    return self._data[instance][item]
+                self._update_version(instance, item)
         else:
             monitor_data = {}
             monitor_data[instance] = get_monitor_data_func()
-            self._make_cache(monitor_data, instance, item)
-        #    return monitor_data[instance][item]
+            self._update_version(instance, item, monitor_data[instance].keys())
+            self._make_cache(monitor_data)
+
         return self._data[instance][item]
 
     def get_keys(self, instance,  get_monitor_data_func=None):
         """
         get item data from instance
         @param instance: the instance you want get data
-        @param item: which monitor item you want get from the instance
         @param get_monitor_data_func: this func used for get monitor data from each instances
         @return:
         """
@@ -156,34 +150,52 @@ class Monitor(object):
             monitor_data = {}
 #                for instance_name in instance_list:
             monitor_data[instance] = get_monitor_data_func()
-            self._make_cache(monitor_data, instance, '')
+            self._make_cache(monitor_data)
         #    return monitor_data[instance][item]
 
         return [] if not self._data.has_key(instance) else list(sorted(self._data[instance].keys()))
 
-    def _make_cache(self, data, instance, item):
+
+    def _update_version(self, instance, item, item_list=None):
+
+        if item_list:
+            version = hashlib.md5(str(time.time())).hexdigest()
+            for k in item_list:
+                key = instance + '_' + k
+                if not key in self._data['file_info']:
+                    self._data['file_info'][key] = 'default'
+            self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
+        else:
+            self._data['file_info'][instance + '_' + item] = self._data['file_info']['file']
+            self._cache_file.seek(0)
+            self._cache_file.truncate()
+            self._cache_file.write(json.dumps(self._data,indent=4,sort_keys=True))
+            self._cache_file.flush()
+
+    def _make_cache(self, data):
         """
         create and update cache file
         @param data: the data you want put in cache file, must be a dict
-        @param instance: which instance of the data
-        @param item: used to build key
+        # @param instance: which instance of the data
+        # @param item: used to build key
         @return: None
         """
         result = data
 
-        version = hashlib.md5(str(time.time())).hexdigest()
-        if 'discovery' in result.keys():
-            self._data.update(result)
-        else:
-            try:
-                for k in result[instance].keys():
-                    key = instance + '_' + k
-                    if not key in self._data['file_info']:
-                        self._data['file_info'][key] = 'default'
-                self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
-                self._data.update(result)
-            except (ValueError, TypeError, KeyError):
-                raise TypeError("have no key named %s" % k)
+        # version = hashlib.md5(str(time.time())).hexdigest()
+        # if 'discovery' in result.keys():
+        #     self._data.update(result)
+        # else:
+        #     try:
+        #         for k in result[instance].keys():
+        #             key = instance + '_' + k
+        #             if not key in self._data['file_info']:
+        #                 self._data['file_info'][key] = 'default'
+        #         self._data['file_info']['file'] = self._data['file_info'][instance + '_' + item] = version
+        #         self._data.update(result)
+        #     except (ValueError, TypeError, KeyError):
+        #         raise TypeError("have no key named %s" % k)
+        self._data.update(result)
 
         self._cache_file.seek(0)
         self._cache_file.truncate()
@@ -241,7 +253,7 @@ class Monitor(object):
 
         data = self._get_instance_list(is_discovery=True, discovery_func=discovery_func, procname=procname)
 
-        self._make_cache({'discovery': data}, 'discovery', 'discovery')
+        self._make_cache({'discovery': data})
 
         for instance in data:
             tmp_dict = {}
