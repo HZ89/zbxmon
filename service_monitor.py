@@ -174,8 +174,8 @@ class ServiceMonitor(Monitor):
             mongo_status[key.lower()] = mongo_status.pop(key)
         return mongo_status
 
-
-    def discovery_redis(self):
+    @classmethod
+    def discovery_redis(cls):
         """
         find redis instance
         @return: [(ip, prot, passwd)]

@@ -17,6 +17,7 @@ zabbix_service_monitor_script
 
   
 #example:
+##discovery
     ./service_monitor.py --discovery --macros MYSQLIP/MYSQLPORT --service mysql --extend zabbixmonitor/zabbixmonitor
 zabbixmonitor为监控用账户密码，若此用户链接失败会尝试寻找sock文件进行连接  
 输出如下:
@@ -37,4 +38,11 @@ zabbixmonitor为监控用账户密码，若此用户链接失败会尝试寻找s
         }
       ]
     }
+##获取数据    
+    ./service_monitor.py --service mysql --item additional_pool_alloc --instance 192.168.1.1/3306 --extend zabbixmonitor/zabbixmonitor
+   
+#zabbix agent 配置
+在zabbix agentd配置中添加:
     
+    UserParameter=service.status[*],/path/to/service_monitor.py --service=$1 --item=$2 --instance=$3 --extend=$4
+    UserParameter=service.discovery[*],/path/to/service_monitor.py --service=$1 --discovery --macros=$2 --extend=$3
