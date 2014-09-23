@@ -1,5 +1,6 @@
 #!/opt/17173_install/python-2.7.6/bin/python2.7
 __author__ = 'Harrison'
+import sys, os, re
 from functools import partial
 from argh import ArghParser, arg
 import argparse
@@ -78,12 +79,22 @@ class ServiceMonitor(Monitor):
         return ServiceMonitor.get_discovery_data(macro_name_list, discovery_func)
 
     @classmethod
-    def discovery_phpfpm(cls, config_path):
+    def discovery_phpfpm(cls, *args):
+        """
+        find local php-fpm process from config files
+        @param args: first value is config dir root, second value is regular used for find php-fpm config file
+        @return:
+        """
         import ConfigParser
+        config_path = args[0]
+        if os.path.isdir(config_path):
+            for root_dir, dirs, files in os.walk(config_path):
+                for file in files:
+                    if re.search()
 
     @classmethod
     def discovery_mysql(cls, *args):
-        import os, psutil
+        import psutil
 
         result = []
         for proc in [i for i in psutil.process_iter() if i.name() == 'mysqld']:
@@ -180,17 +191,15 @@ class ServiceMonitor(Monitor):
         return mongo_status
 
     @classmethod
-    def discovery_redis(cls):
+    def discovery_redis(cls, *args):
         """
         find redis instance
         @return: [(ip, prot, passwd)]
         """
-        import re
         import psutil
-        import os
 
         redises = []
-        redis_conf_path_root = '/data'
+        redis_conf_path_root = args[0]
 
         for redis_process in [x
                               for x in psutil.process_iter()
