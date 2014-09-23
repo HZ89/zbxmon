@@ -87,10 +87,21 @@ class ServiceMonitor(Monitor):
         """
         import ConfigParser
         config_path = args[0]
+        prog = re.compile(args[1])
+        fpm_conf = []
         if os.path.isdir(config_path):
             for root_dir, dirs, files in os.walk(config_path):
                 for file in files:
-                    if re.search()
+                    if prog.match(file):
+                        config = ConfigParser.RawConfigParser()
+                        config.read(file)
+                        for section in config.sections():
+                            if section == 'global':
+                                continue
+                            pool = {}
+                            for item, value in config.items(section):
+
+
 
     @classmethod
     def discovery_mysql(cls, *args):
@@ -219,7 +230,7 @@ class ServiceMonitor(Monitor):
                     for file in files:
                         if str(file) == 'redis.conf' and re.search(redis_port, str(root_dir)):
                             with open(os.path.join(root_dir, file), 'r') as f:
-                                for line in f.read():
+                                for line in f.readlines():
                                     if re.search('^requirepass', line):
                                         redis_passwd = line.split()[1]
             redises.append([redis_ip, redis_port, redis_passwd])
