@@ -1,18 +1,13 @@
 #!/opt/17173_install/python-2.7.6/bin/python2.7
 __author__ = 'Harrison'
-from monitor import Monitor
 from functools import partial
 from argh import ArghParser, arg
 import argparse
-from mysql_monitor import MySQL_Monitor
+from monitor import Monitor
+from lib.mysql_monitor import MySQL_Monitor
+import lib.flup_fcgi_client as fcgi_client
 
 # TODO:Completion script comments
-BIN = {
-    'mysql': 'mysqld',
-    'redis': 'redis-server',
-    'memcache': 'memcached',
-    'mongodb': 'mongod',
-}
 
 
 class ServiceMonitor(Monitor):
@@ -22,6 +17,12 @@ class ServiceMonitor(Monitor):
 
     @classmethod
     def _get_bin_name(cls, service):
+        BIN = {
+            'mysql': 'mysqld',
+            'redis': 'redis-server',
+            'memcache': 'memcached',
+            'mongodb': 'mongod',
+        }
         return BIN[service]
 
     def load_data(self, service, instance, item=None, *args):
@@ -75,6 +76,10 @@ class ServiceMonitor(Monitor):
         else:
             discovery_func = partial(ServiceMonitor._get_ip_port, ServiceMonitor._get_bin_name(service))
         return ServiceMonitor.get_discovery_data(macro_name_list, discovery_func)
+
+    @classmethod
+    def discovery_phpfpm(cls, config_path):
+        import ConfigParser
 
     @classmethod
     def discovery_mysql(cls, *args):
