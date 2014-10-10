@@ -78,28 +78,28 @@ class ServiceMonitor(Monitor):
             discovery_func = partial(ServiceMonitor._get_ip_port, ServiceMonitor._get_bin_name(service))
         return ServiceMonitor.get_discovery_data(macro_name_list, discovery_func)
 
-    @classmethod
-    def discovery_phpfpm(cls, *args):
-        """
-        find local php-fpm process from config files
-        @param args: first value is config dir root, second value is regular used for find php-fpm config file
-        @return:
-        """
-        import ConfigParser
-        config_path = args[0]
-        prog = re.compile(args[1])
-        fpm_conf = []
-        if os.path.isdir(config_path):
-            for root_dir, dirs, files in os.walk(config_path):
-                for file in files:
-                    if prog.match(file):
-                        config = ConfigParser.RawConfigParser()
-                        config.read(file)
-                        for section in config.sections():
-                            if section == 'global':
-                                continue
-                            pool = {}
-                            for item, value in config.items(section):
+    # @classmethod
+    # def discovery_phpfpm(cls, *args):
+    #     """
+    #     find local php-fpm process from config files
+    #     @param args: first value is config dir root, second value is regular used for find php-fpm config file
+    #     @return:
+    #     """
+    #     import ConfigParser
+    #     config_path = args[0]
+    #     prog = re.compile(args[1])
+    #     fpm_conf = []
+    #     if os.path.isdir(config_path):
+    #         for root_dir, dirs, files in os.walk(config_path):
+    #             for file in files:
+    #                 if prog.match(file):
+    #                     config = ConfigParser.RawConfigParser()
+    #                     config.read(file)
+    #                     for section in config.sections():
+    #                         if section == 'global':
+    #                             continue
+    #                         pool = {}
+    #                         for item, value in config.items(section):
 
 
 
