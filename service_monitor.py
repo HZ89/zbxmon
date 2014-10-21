@@ -2,19 +2,17 @@
 # coding:utf-8
 __author__ = 'Harrison'
 
+import os, sys
+
+sys.path.extend(os.path.realpath(__file__))
+
 from monitor import Monitor
 from functools import partial
 from argh import ArghParser, arg
 import argparse
-from mysql_monitor import  MySQL_Monitor
+from mysql_monitor import MySQL_Monitor
 
 # TODO:Completion script comments
-BIN = {
-    'mysql': 'mysqld',
-    'redis': 'redis-server',
-    'memcache': 'memcached',
-    'mongodb': 'mongod',
-}
 
 
 class ServiceMonitor(Monitor):
@@ -24,6 +22,12 @@ class ServiceMonitor(Monitor):
 
     @classmethod
     def _get_bin_name(cls, service):
+        BIN = {
+            'mysql': 'mysqld',
+            'redis': 'redis-server',
+            'memcache': 'memcached',
+            'mongodb': 'mongod',
+        }
         return BIN[service]
 
     def load_data(self, service, instance, item=None, *args):
@@ -37,7 +41,7 @@ class ServiceMonitor(Monitor):
         """
         get_func_name = 'get_{}_data'.format(service)
         if hasattr(self, get_func_name):
-            #find the func, and add instance as the first arg
+            # find the func, and add instance as the first arg
             get_func = partial(getattr(self, get_func_name), instance)
             #add args
             if args:
@@ -57,7 +61,7 @@ class ServiceMonitor(Monitor):
         """
         get_func_name = 'get_{}_data'.format(service)
         if hasattr(self, get_func_name):
-            #find the func, and add instance as the first arg
+            # find the func, and add instance as the first arg
             get_func = partial(getattr(self, get_func_name), instance)
             #add args
             if args:
@@ -78,10 +82,10 @@ class ServiceMonitor(Monitor):
             discovery_func = partial(ServiceMonitor._get_ip_port, ServiceMonitor._get_bin_name(service))
         return ServiceMonitor.get_discovery_data(macro_name_list, discovery_func)
 
-<<<<<<< Updated upstream
+
     # @classmethod
     # def discovery_phpfpm(cls, *args):
-    #     """
+    # """
     #     find local php-fpm process from config files
     #     @param args: first value is config dir root, second value is regular used for find php-fpm config file
     #     @return:
@@ -104,11 +108,10 @@ class ServiceMonitor(Monitor):
 
 
 
-=======
->>>>>>> Stashed changes
+
     @classmethod
     def discovery_mysql(cls, *args):
-        import os, psutil
+        import psutil
 
         result = []
         for proc in [i for i in psutil.process_iter() if i.name() == 'mysqld']:
@@ -138,85 +141,85 @@ class ServiceMonitor(Monitor):
         import memcache
 
         instance_name = str(instance_name).replace('/', ':')
-        status=None
+        status = None
         try:
             conn = memcache.Client([instance_name], debug=0)
             status = conn.get_stats()[0][1]
         except Exception as e:
-            status={}
-        check_keys={
+            status = {}
+        check_keys = {
             #
-            'pid': int,		                    #memcache服务器进程ID
-            'uptime': int,		                #服务器已运行秒数
-            'time': int,		                #服务器当前Unix时间戳
-            'version': str,		                #memcache版本
-            'pointer_size': int,		        #操作系统指针大小
-            'libevent': str,                    #libevent版本
+            'pid': int,  #memcache服务器进程ID
+            'uptime': int,  #服务器已运行秒数
+            'time': int,  #服务器当前Unix时间戳
+            'version': str,  #memcache版本
+            'pointer_size': int,  #操作系统指针大小
+            'libevent': str,  #libevent版本
             # cpu
-            'rusage_user': float,		        #进程累计用户时间
-            'rusage_system': float,	            #进程累计系统时间
+            'rusage_user': float,  #进程累计用户时间
+            'rusage_system': float,  #进程累计系统时间
             # connections
-            'accepting_conns': int,		        #服务器是否达到过最大连接（0/1）
-            'curr_connections': int,		    #当前连接数量
-            'threads': int,		                #当前线程数
-            'listen_disabled_num': int,		    #失效的监听数
-            'conn_yields': int,		            #连接操作主动放弃数目: int,内部请求数达到0
+            'accepting_conns': int,  #服务器是否达到过最大连接（0/1）
+            'curr_connections': int,  #当前连接数量
+            'threads': int,  #当前线程数
+            'listen_disabled_num': int,  #失效的监听数
+            'conn_yields': int,  #连接操作主动放弃数目: int,内部请求数达到0
             #
-            'total_connections': int,		    #Memcached运行以来连接总数
-            'connection_structures': int,		#Memcached分配的连接结构数量
+            'total_connections': int,  #Memcached运行以来连接总数
+            'connection_structures': int,  #Memcached分配的连接结构数量
 
             # count
-            'cmd_set': int,		                #set命令请求次数
-            'cmd_get': int,		                #get命令请求次数
-            'cas_badval': int,		            #使用擦拭次数
-            'cmd_touch': int,		            #执行touch次数，touch可以刷新过期时间
-            'cmd_flush': int,		            #flush命令请求次数
-            'auth_cmds': int,		            #认证命令处理的次数
-            'auth_errors': int,		            #认证失败数目
+            'cmd_set': int,  #set命令请求次数
+            'cmd_get': int,  #get命令请求次数
+            'cas_badval': int,  #使用擦拭次数
+            'cmd_touch': int,  #执行touch次数，touch可以刷新过期时间
+            'cmd_flush': int,  #flush命令请求次数
+            'auth_cmds': int,  #认证命令处理的次数
+            'auth_errors': int,  #认证失败数目
             # ratio
-            'get_hits': int,		            #get命令命中次数
-            'get_misses': int,		            #get命令未命中次数
+            'get_hits': int,  #get命令命中次数
+            'get_misses': int,  #get命令未命中次数
 
-            'delete_misses': int,		        #delete命令未命中次数
-            'delete_hits': int,		            #delete命令命中次数
+            'delete_misses': int,  #delete命令未命中次数
+            'delete_hits': int,  #delete命令命中次数
 
-            'incr_misses': int,		            #incr命令未命中次数
-            'incr_hits': int,		            #incr命令命中次数
+            'incr_misses': int,  #incr命令未命中次数
+            'incr_hits': int,  #incr命令命中次数
 
-            'decr_misses': int,		            #decr命令未命中次数
-            'decr_hits': int,		            #decr命令命中次数
+            'decr_misses': int,  #decr命令未命中次数
+            'decr_hits': int,  #decr命令命中次数
 
-            'cas_misses': int,		            #cas命令未命中次数
-            'cas_hits': int,		            #cas命令命中次数
+            'cas_misses': int,  #cas命令未命中次数
+            'cas_hits': int,  #cas命令命中次数
 
-            'touch_hits': int,		            #touch命中次数
-            'touch_misses': int,		        #touch未命中次数
+            'touch_hits': int,  #touch命中次数
+            'touch_misses': int,  #touch未命中次数
             # access
-            'bytes_read': int,		            #读取总字节数
-            'bytes_written': int,	            #发送总字节数
+            'bytes_read': int,  #读取总字节数
+            'bytes_written': int,  #发送总字节数
             # memory
-            'limit_maxbytes': int,	            #分配的内存总大小（字节）
-            'bytes': int,		                #当前存储占用的字节数
-            'hash_bytes': int,		            #hash 内存使用总量单位为byte
+            'limit_maxbytes': int,  #分配的内存总大小（字节）
+            'bytes': int,  #当前存储占用的字节数
+            'hash_bytes': int,  #hash 内存使用总量单位为byte
             # item
-            'curr_items': int,		            #当前存储的数据总数
-            'total_items': int,		            #启动以来存储的数据总数
-            'evictions': int,		            #LRU释放的对象数目
-            'reclaimed': int,		            #已过期的数据条目来存储新数据的数目
+            'curr_items': int,  #当前存储的数据总数
+            'total_items': int,  #启动以来存储的数据总数
+            'evictions': int,  #LRU释放的对象数目
+            'reclaimed': int,  #已过期的数据条目来存储新数据的数目
         }
-        result={}
+        result = {}
         for ckey in check_keys.keys():
-            result[ckey]=check_keys[ckey](status[ckey] if status.has_key(ckey) else '0');
+            result[ckey] = check_keys[ckey](status[ckey] if status.has_key(ckey) else '0');
 
-        hits_ratio_cmds=['get','delete','incr','decr','cas','touch']
+        hits_ratio_cmds = ['get', 'delete', 'incr', 'decr', 'cas', 'touch']
         for cmd in hits_ratio_cmds:
-            hit_key="%s_hits" % cmd
-            miss_key="%s_misses" % cmd
-            if result.has_key(hit_key) and result.has_key(miss_key)\
-                    and result[hit_key]+result[miss_key]>0:
-                result["%s_hists_ratio" % cmd]=int(result[hit_key]/(result[hit_key]+result[miss_key])*100)
+            hit_key = "%s_hits" % cmd
+            miss_key = "%s_misses" % cmd
+            if result.has_key(hit_key) and result.has_key(miss_key) \
+                    and result[hit_key] + result[miss_key] > 0:
+                result["%s_hists_ratio" % cmd] = int(result[hit_key] / (result[hit_key] + result[miss_key]) * 100)
             else:
-                result["%s_hists_ratio" % cmd]=0
+                result["%s_hists_ratio" % cmd] = 0
 
         return result
 
@@ -249,16 +252,16 @@ class ServiceMonitor(Monitor):
                              'globalLock_currentQueue_writers': status['globalLock']['currentQueue']['writers'],
                              #'globalLock_ratio': status['globalLock']['ratio'],
                              # memory
-                             'mem_resident': status['mem']['resident']*1024*1024,
-                             'mem_virtual': status['mem']['virtual']*1024*1024,
-                             'mem_mapped' : status['mem']['mapped']*1024*1024,
-                             'mem_mappedWithJournal':status['mem']['mappedWithJournal']*1024*1024,
-                             'mem_extra_heap_usage_bytes':status['extra_info']['heap_usage_bytes'],
-                             'mem_extra_page_faults':status['extra_info']['page_faults'],
+                             'mem_resident': status['mem']['resident'] * 1024 * 1024,
+                             'mem_virtual': status['mem']['virtual'] * 1024 * 1024,
+                             'mem_mapped': status['mem']['mapped'] * 1024 * 1024,
+                             'mem_mappedWithJournal': status['mem']['mappedWithJournal'] * 1024 * 1024,
+                             'mem_extra_heap_usage_bytes': status['extra_info']['heap_usage_bytes'],
+                             'mem_extra_page_faults': status['extra_info']['page_faults'],
                              # connections
                              'connections_current': status['connections']['current'],
                              'connections_available': status['connections']['available'],
-                             'connections_total':status['connections']['current']+status['connections']['available'],
+                             'connections_total': status['connections']['current'] + status['connections']['available'],
                              'connections_totalCreated': status['connections']['totalCreated'],
                              # index
                              'index_accesses': status['indexCounters']['accesses'],
@@ -278,28 +281,28 @@ class ServiceMonitor(Monitor):
                              'opcounters_getmore': status['opcounters']['getmore'],
                              # dur
                              'dur_commits': status['dur']['commits'],
-                             'dur_journaledMB': status['dur']['journaledMB']*1024*1024,
-                             'dur_writeToDataFilesMB': status['dur']['writeToDataFilesMB']*1024*1024,
+                             'dur_journaledMB': status['dur']['journaledMB'] * 1024 * 1024,
+                             'dur_writeToDataFilesMB': status['dur']['writeToDataFilesMB'] * 1024 * 1024,
                              'dur_timeMs_writerToJournal': status['dur']['timeMs']['writeToJournal'],
                              'dur_timeMs_writerToDataFiles': status['dur']['timeMs']['writeToDataFiles'],
                              # repl
-                             'repl_ismaster':status['repl']['ismaster'],
+                             'repl_ismaster': status['repl']['ismaster'],
                              # io flush
-                             'backFlush_flushes':status['backgroundFlushing']['flushes'],
-                             'backFlush_total_ms':status['backgroundFlushing']['total_ms'],
-                             'backFlush_average_ms':status['backgroundFlushing']['average_ms'],
-                             'backFlush_last_ms':status['backgroundFlushing']['last_ms'],
+                             'backFlush_flushes': status['backgroundFlushing']['flushes'],
+                             'backFlush_total_ms': status['backgroundFlushing']['total_ms'],
+                             'backFlush_average_ms': status['backgroundFlushing']['average_ms'],
+                             'backFlush_last_ms': status['backgroundFlushing']['last_ms'],
                              # cluster
                              # cursors
-                             'cursors_totalOpen':status['cursors']['totalOpen'],
+                             'cursors_totalOpen': status['cursors']['totalOpen'],
                              'cursors_timedOut': status['cursors']['timedOut'],
                              # asserts
-                             'asserts_msg':status['asserts']['msg'],
-                             'asserts_regular':status['asserts']['regular'],
-                             'asserts_warning':status['asserts']['warning'],
-                             'asserts_user':status['asserts']['user'],
-                             'asserts_rollovers':status['asserts']['rollovers']
-                             })
+                             'asserts_msg': status['asserts']['msg'],
+                             'asserts_regular': status['asserts']['regular'],
+                             'asserts_warning': status['asserts']['warning'],
+                             'asserts_user': status['asserts']['user'],
+                             'asserts_rollovers': status['asserts']['rollovers']
+        })
 
         for key in mongo_status.keys():
             mongo_status[key.lower()] = mongo_status.pop(key)
@@ -313,7 +316,6 @@ class ServiceMonitor(Monitor):
         """
         import re
         import psutil
-        import os
 
         redises = []
         redis_conf_path_root = '/data'
@@ -352,71 +354,71 @@ class ServiceMonitor(Monitor):
 
         ip, port, passwd = instance_name.split('/')
         r = redis.StrictRedis(host=ip, port=port, password=passwd)
-        d=r.info()
-        check_items={
-            'redis_version':str,
-            'redis_mode':str,
-            'uptime_in_seconds':int,
+        d = r.info()
+        check_items = {
+            'redis_version': str,
+            'redis_mode': str,
+            'uptime_in_seconds': int,
             # Clients
-            'connected_clients':int,              #当前客户端连接数
-            'blocked_clients':int,                #正在等待阻塞命令（BLPOP、BRPOP、BRPOPLPUSH）的客户端的数量
-            'connected_slaves':int,               #当前从连接的数量
-            'rejected_connections':int,
-            'total_connections_received':int,     #运行以来连接过的客户端的总数量
-            'client_longest_output_list':int,     #当前连接的客户端当中，最长的输出列表
-            'client_biggest_input_buf':int,       #当前连接的客户端当中，最大输入缓存
+            'connected_clients': int,  #当前客户端连接数
+            'blocked_clients': int,  #正在等待阻塞命令（BLPOP、BRPOP、BRPOPLPUSH）的客户端的数量
+            'connected_slaves': int,  #当前从连接的数量
+            'rejected_connections': int,
+            'total_connections_received': int,  #运行以来连接过的客户端的总数量
+            'client_longest_output_list': int,  #当前连接的客户端当中，最长的输出列表
+            'client_biggest_input_buf': int,  #当前连接的客户端当中，最大输入缓存
             # Memory
-            'used_memory':int,                    #由redis分配器分配的内存总量，以字节（byte）为单位
-            'used_memory_rss':int,                #从操作系统的角度，返回rRedis已分配的内存总量（俗称常驻集大小),这个值和top、ps等命令的输出一致。
-            'used_memory_peak':int,               #redis的内存消耗峰值（以字节为单位）
-            'used_memory_lua':int,                #引擎所使用的内存大小（以字节为单位）
-            'mem_fragmentation_ratio':float,      #内存碎片比率:userd_memory_rss和used_memory之间的比率
+            'used_memory': int,  #由redis分配器分配的内存总量，以字节（byte）为单位
+            'used_memory_rss': int,  #从操作系统的角度，返回rRedis已分配的内存总量（俗称常驻集大小),这个值和top、ps等命令的输出一致。
+            'used_memory_peak': int,  #redis的内存消耗峰值（以字节为单位）
+            'used_memory_lua': int,  #引擎所使用的内存大小（以字节为单位）
+            'mem_fragmentation_ratio': float,  #内存碎片比率:userd_memory_rss和used_memory之间的比率
 
 
             # Persistence
-            'rdb_changes_since_last_save':int,    #上次保存数据库之后，执行命令的次数
-            'rdb_bgsave_in_progress':int,         #后台进行中的save操作的数量
-            'rdb_last_save_time':int,             #最后一次成功保存的时间点，以 UNIX 时间戳格式显示
-            'rdb_last_bgsave_status':str,
-            'rdb_last_bgsave_time_sec':int,
-            'rdb_current_bgsave_time_sec':int,
+            'rdb_changes_since_last_save': int,  #上次保存数据库之后，执行命令的次数
+            'rdb_bgsave_in_progress': int,  #后台进行中的save操作的数量
+            'rdb_last_save_time': int,  #最后一次成功保存的时间点，以 UNIX 时间戳格式显示
+            'rdb_last_bgsave_status': str,
+            'rdb_last_bgsave_time_sec': int,
+            'rdb_current_bgsave_time_sec': int,
 
 
             # Stats
-            'total_commands_processed':int,       #运行以来执行过的命令的总数量
-            'instantaneous_ops_per_sec':int,      #每秒瞬间ops数
-            'expired_keys':int,                   #运行以来过期的 key 的数量
-            'evicted_keys':int,                   #运行以来删除过的key的数量
-            'keyspace_hits':int,                  #命中 key 的次数
-            'keyspace_misses':int,                #不命中 key 的次数
-            'pubsub_channels':int,                #当前使用中的频道数量
-            'pubsub_patterns':int,                #当前使用的模式的数量
+            'total_commands_processed': int,  #运行以来执行过的命令的总数量
+            'instantaneous_ops_per_sec': int,  #每秒瞬间ops数
+            'expired_keys': int,  #运行以来过期的 key 的数量
+            'evicted_keys': int,  #运行以来删除过的key的数量
+            'keyspace_hits': int,  #命中 key 的次数
+            'keyspace_misses': int,  #不命中 key 的次数
+            'pubsub_channels': int,  #当前使用中的频道数量
+            'pubsub_patterns': int,  #当前使用的模式的数量
             #'latest_fork_usec':int,
 
             # Replication
-            'role':str,                           #当前实例的角色master还是slave
-            'master_host':str,
-            'master_port':int,
-            'master_link_status':str,             #up or down
-            'master_last_io_seconds_ago':int,
-            'master_sync_in_progress':int,
-            'slave_lists':str,
+            'role': str,  #当前实例的角色master还是slave
+            'master_host': str,
+            'master_port': int,
+            'master_link_status': str,  #up or down
+            'master_last_io_seconds_ago': int,
+            'master_sync_in_progress': int,
+            'slave_lists': str,
 
             #'slave0:ip=192.168.200.25,port=62710,state=online,offset=823669419,lag=1     #offset 当前从的数据偏移量位置
 
             # CPU
-            'used_cpu_sys':float,
-            'used_cpu_user':float,
-            'used_cpu_sys_children':float,
-            'used_cpu_user_children':float,
+            'used_cpu_sys': float,
+            'used_cpu_user': float,
+            'used_cpu_sys_children': float,
+            'used_cpu_user_children': float,
         }
-        redis_stats={ k:d[k] if d.has_key(k) else v() for k,v in check_items.iteritems()}
-        if redis_stats['connected_slaves'] >0:
-            slave_lists=set()
+        redis_stats = {k: d[k] if d.has_key(k) else v() for k, v in check_items.iteritems()}
+        if redis_stats['connected_slaves'] > 0:
+            slave_lists = set()
             for i in range(redis_stats['connected_slaves']):
                 if d.has_key("slave%s" % i):
                     slave_lists.add(d["slave%s" % i])
-            redis_stats['slave_lists']='\n'.join(list(slave_lists))
+            redis_stats['slave_lists'] = '\n'.join(list(slave_lists))
         return redis_stats
 
 
@@ -438,7 +440,7 @@ def main(args):
         assert not args.macros is None, 'must have macros'
     else:
         assert not args.instance is None, 'must have instance'
-        #   assert not args.item is None, 'must have item'
+        # assert not args.item is None, 'must have item'
 
     arg_list = []
     if args.extend:

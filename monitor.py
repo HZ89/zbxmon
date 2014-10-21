@@ -67,7 +67,7 @@ class Monitor(object):
             self._cache_file.close()
 
     # def __enter__(self):    # In testing
-    #    return self
+    # return self
     #
     #def __exit__(self, exc_type, exc_val, exc_tb):    # In testing
     #    if exc_type is None:
@@ -208,15 +208,16 @@ class Monitor(object):
         """
 
         result = []
-        try:
-            for proc in psutil.process_iter():
+        for proc in psutil.process_iter():
+            try:
                 if proc.name() == proc_name:
-                    listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
+                    listen = list(
+                        sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
                     if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
                         listen[0] = Monitor._get_local_ip()
                     result.append([str(listen[0]), str(listen[1])])
-        except psutil.NoSuchProcess:
-            pass
+            except psutil.NoSuchProcess:
+                pass
 
         return result
 
