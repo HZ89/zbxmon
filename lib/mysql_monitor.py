@@ -9,6 +9,7 @@ import MySQLdb
 import traceback
 from MySQLdb.cursors import Cursor, DictCursor
 
+#http://www.percona.com/doc/percona-monitoring-plugins/1.0/cacti/mysql-templates.html
 
 class MySQL_Monitor(object):
     # sections_struct=[
@@ -431,7 +432,7 @@ class MySQL_Monitor(object):
             conn=MySQLdb.connect(host=host,port=port,user=user,passwd=passwd)
             conn.ping()
         except (MySQLdb.MySQLError,MySQLdb.Error,MySQLdb.InterfaceError,MySQLdb.NotSupportedError,Exception) as e:
-            print e.message
+            #print e.message
             # operationerror: not allowed to connect
             result=-1
         finally:
@@ -448,11 +449,11 @@ class MySQL_Monitor(object):
             count=cur.execute("GRANT PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' WITH MAX_USER_CONNECTIONS 5;flush privileges" % (user,host,passwd))
             result =1
         except (MySQLdb.MySQLError,MySQLdb.Error,MySQLdb.InterfaceError,MySQLdb.NotSupportedError) as e:
-            print e.message
+            print e
             result=-1
         except MySQLdb.OperationalError as e:
             result =-2
-            print e.message
+            print e
         finally:
             if cur: cur.close()
             if conn: conn.close()

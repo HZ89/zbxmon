@@ -150,7 +150,7 @@ class Monitor(object):
             self._make_cache(monitor_data)
         #    return monitor_data[instance][item]
 
-        return [] if not self._data.has_key(instance) else list(sorted(self._data[instance].keys()))
+        return {} if not self._data.has_key(instance) else self._data[instance]
 
 
     def _update_version(self, instance, item, item_list=None):
