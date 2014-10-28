@@ -415,6 +415,7 @@ class MySQL_Monitor(object):
         :param cursor: choice from MySQL.cursors.Cursor and MySQL.cursors.DictCursor
         :return: query result list, the item is list when cursor used Cursor, or dict when cursor used DictCursor
         '''
+        result=None
         try:
             cur = conn.cursor(cursor)
             count = cur.execute(query)
@@ -424,7 +425,7 @@ class MySQL_Monitor(object):
             print e.message
         finally:
             cur.close()
-            return result
+        return result
 
     @classmethod
     def _change_dict_value_to_int(cls, target):
@@ -457,8 +458,9 @@ class MySQL_Monitor(object):
         try:
             conn = MySQLdb.connect(unix_socket=socket)
             cur = conn.cursor()
+            # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
             count = cur.execute(
-                "GRANT PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' WITH MAX_USER_CONNECTIONS 5;flush privileges" % (
+                "GRANT SUPER,PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' WITH MAX_USER_CONNECTIONS 5;flush privileges" % (
                 user, host, passwd))
             result = 1
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError) as e:
@@ -585,27 +587,27 @@ class MySQL_Monitor(object):
                 if res and len(res) > 0:
                     innodb_status = cls._get_innodb_status(res[0]['Status'])
                     overrides = {
-                        'Innodb_buffer_pool_pages_data': 'database_pages',
-                        'Innodb_buffer_pool_pages_dirty': 'modified_pages',
-                        'Innodb_buffer_pool_pages_free': 'free_pages',
-                        'Innodb_buffer_pool_pages_total': 'pool_size',
-                        'Innodb_data_fsyncs': 'file_fsyncs',
-                        'Innodb_data_pending_reads': 'pending_normal_aio_reads',
-                        'Innodb_data_pending_writes': 'pending_normal_aio_writes',
-                        'Innodb_os_log_pending_fsyncs': 'pending_log_flushes',
-                        'Innodb_pages_created': 'pages_created',
-                        'Innodb_pages_read': 'pages_read',
-                        'Innodb_pages_written': 'pages_written',
-                        'Innodb_rows_deleted': 'rows_deleted',
-                        'Innodb_rows_inserted': 'rows_inserted',
-                        'Innodb_rows_read': 'rows_read',
-                        'Innodb_rows_updated': 'rows_updated',
-                        'Innodb_buffer_pool_reads': 'pool_reads',
-                        'Innodb_buffer_pool_read_requests': 'pool_read_requests',
+                        'Innodb_buffer_pool_pages_data':    ['database_pages',1],
+                        'Innodb_buffer_pool_pages_dirty':   ['modified_pages',1],
+                        'Innodb_buffer_pool_pages_free':    ['free_pages',1],
+                        'Innodb_buffer_pool_pages_total':   ['pool_size',1],
+                        'Innodb_data_fsyncs':               ['file_fsyncs',1],
+                        'Innodb_data_pending_reads':        ['pending_normal_aio_reads',1],
+                        'Innodb_data_pending_writes':       ['pending_normal_aio_writes',1],
+                        'Innodb_os_log_pending_fsyncs':     ['pending_log_flushes',1],
+                        'Innodb_pages_created':             ['pages_created',1],
+                        'Innodb_pages_read':                ['pages_read',1],
+                        'Innodb_pages_written':             ['pages_written',1],
+                        'Innodb_rows_deleted':              ['rows_deleted',1],
+                        'Innodb_rows_inserted':             ['rows_inserted',1],
+                        'Innodb_rows_read':                 ['rows_read',1],
+                        'Innodb_rows_updated':              ['rows_updated',1],
+                        'Innodb_buffer_pool_reads':         ['pool_reads',1],
+                        'Innodb_buffer_pool_read_requests': ['pool_read_requests',1],
                     }
                     for key in overrides.keys():
                         if status.has_key(key):
-                            innodb_status[overrides[key]] = status[key]
+                            innodb_status[overrides[key][0]] = status[key]*overrides[key][1]
                     status.update(innodb_status)
             # Get response time histogram from Percona Server or MariaDB if enabled.
             if (status.has_key('have_response_time_distribution') and status[

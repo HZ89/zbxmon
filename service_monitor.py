@@ -240,68 +240,68 @@ class ServiceMonitor(Monitor):
         db.disconnect()
         mongo_status = {}
 
-        mongo_status.update({'host': status['host'],
-                             'version': status['version'],
-                             'uptime': status['uptime'],
+        mongo_status.update({'host': status.get('host',''),
+                             'version': status.get('version',''),
+                             'uptime': status.get('uptime',0),
                              # global lock
-                             'globalLock_activeClients_total': status['globalLock']['activeClients']['total'],
-                             'globalLock_activeClients_readers': status['globalLock']['activeClients']['readers'],
-                             'globalLock_activeClients_writers': status['globalLock']['activeClients']['writers'],
-                             'globalLock_currentQueue_total': status['globalLock']['currentQueue']['total'],
-                             'globalLock_currentQueue_readers': status['globalLock']['currentQueue']['readers'],
-                             'globalLock_currentQueue_writers': status['globalLock']['currentQueue']['writers'],
-                             #'globalLock_ratio': status['globalLock']['ratio'],
+                             'globalLock_activeClients_total': status.get('globalLock',{}).get('activeClients',{}).get('total',0),
+                             'globalLock_activeClients_readers': status.get('globalLock',{}).get('activeClients',{}).get('readers',0),
+                             'globalLock_activeClients_writers': status.get('globalLock',{}).get('activeClients',{}).get('writers',0),
+                             'globalLock_currentQueue_total': status.get('globalLock',{}).get('currentQueue',{}).get('total',0),
+                             'globalLock_currentQueue_readers': status.get('globalLock',{}).get('currentQueue',{}).get('readers',0),
+                             'globalLock_currentQueue_writers': status.get('globalLock',{}).get('currentQueue',{}).get('writers',0),
+                             #'globalLock_ratio': status.get('globalLock',{}).get('ratio',{}),
                              # memory
-                             'mem_resident': status['mem']['resident'] * 1024 * 1024,
-                             'mem_virtual': status['mem']['virtual'] * 1024 * 1024,
-                             'mem_mapped': status['mem']['mapped'] * 1024 * 1024,
-                             'mem_mappedWithJournal': status['mem']['mappedWithJournal'] * 1024 * 1024,
-                             'mem_extra_heap_usage_bytes': status['extra_info']['heap_usage_bytes'],
-                             'mem_extra_page_faults': status['extra_info']['page_faults'],
+                             'mem_resident': status.get('mem',{}).get('resident',0) * 1024 * 1024,
+                             'mem_virtual': status.get('mem',{}).get('virtual',0) * 1024 * 1024,
+                             'mem_mapped': status.get('mem',{}).get('mapped',0) * 1024 * 1024,
+                             'mem_mappedWithJournal': status.get('mem',{}).get('mappedWithJournal',0) * 1024 * 1024,
+                             'mem_extra_heap_usage_bytes': status.get('extra_info',{}).get('heap_usage_bytes',0),
+                             'mem_extra_page_faults': status.get('extra_info',{}).get('page_faults',0),
                              # connections
-                             'connections_current': status['connections']['current'],
-                             'connections_available': status['connections']['available'],
-                             'connections_total': status['connections']['current'] + status['connections']['available'],
-                             'connections_totalCreated': status['connections']['totalCreated'],
+                             'connections_current': status.get('connections',{}).get('current',0),
+                             'connections_available': status.get('connections',{}).get('available',0),
+                             'connections_total': status.get('connections',{}).get('current',{}) + status.get('connections',{}).get('available',0),
+                             'connections_totalCreated': status.get('connections',{}).get('totalCreated',0),
                              # index
-                             'index_accesses': status['indexCounters']['accesses'],
-                             'index_hits': status['indexCounters']['hits'],
-                             'index_misses': status['indexCounters']['misses'],
-                             'index_missRatio': status['indexCounters']['missRatio'],
-                             'index_resets': status['indexCounters']['resets'],
+                             'index_accesses': status.get('indexCounters',{}).get('accesses',0),
+                             'index_hits': status.get('indexCounters',{}).get('hits',0),
+                             'index_misses': status.get('indexCounters',{}).get('misses',0),
+                             'index_missRatio': status.get('indexCounters',{}).get('missRatio',0),
+                             'index_resets': status.get('indexCounters',{}).get('resets',0),
                              # network
-                             'network_bytesIn': status['network']['bytesIn'],
-                             'network_bytesOut': status['network']['bytesOut'],
-                             'network_numRequests': status['network']['numRequests'],
+                             'network_bytesIn': status.get('network',{}).get('bytesIn',0),
+                             'network_bytesOut': status.get('network',{}).get('bytesOut',0),
+                             'network_numRequests': status.get('network',{}).get('numRequests',0),
                              # operations
-                             'opcounters_insert': status['opcounters']['insert'],
-                             'opcounters_query': status['opcounters']['query'],
-                             'opcounters_update': status['opcounters']['update'],
-                             'opcounters_delete': status['opcounters']['delete'],
-                             'opcounters_getmore': status['opcounters']['getmore'],
+                             'opcounters_insert': status.get('opcounters',{}).get('insert',0),
+                             'opcounters_query': status.get('opcounters',{}).get('query',0),
+                             'opcounters_update': status.get('opcounters',{}).get('update',0),
+                             'opcounters_delete': status.get('opcounters',{}).get('delete',0),
+                             'opcounters_getmore': status.get('opcounters',{}).get('getmore',0),
                              # dur
-                             'dur_commits': status['dur']['commits'],
-                             'dur_journaledMB': status['dur']['journaledMB'] * 1024 * 1024,
-                             'dur_writeToDataFilesMB': status['dur']['writeToDataFilesMB'] * 1024 * 1024,
-                             'dur_timeMs_writerToJournal': status['dur']['timeMs']['writeToJournal'],
-                             'dur_timeMs_writerToDataFiles': status['dur']['timeMs']['writeToDataFiles'],
+                             'dur_commits': status.get('dur',{}).get('commits',0),
+                             'dur_journaledMB': status.get('dur',{}).get('journaledMB',0) * 1024 * 1024,
+                             'dur_writeToDataFilesMB': status.get('dur',{}).get('writeToDataFilesMB',0) * 1024 * 1024,
+                             'dur_timeMs_writerToJournal': status.get('dur',{}).get('timeMs',{}).get('writeToJournal',0),
+                             'dur_timeMs_writerToDataFiles': status.get('dur',{}).get('timeMs',{}).get('writeToDataFiles',0),
                              # repl
-                             'repl_ismaster': status['repl']['ismaster'],
+                             'repl_ismaster': status.get('repl',{}).get('ismaster',0),
                              # io flush
-                             'backFlush_flushes': status['backgroundFlushing']['flushes'],
-                             'backFlush_total_ms': status['backgroundFlushing']['total_ms'],
-                             'backFlush_average_ms': status['backgroundFlushing']['average_ms'],
-                             'backFlush_last_ms': status['backgroundFlushing']['last_ms'],
+                             'backFlush_flushes': status.get('backgroundFlushing',{}).get('flushes',0),
+                             'backFlush_total_ms': status.get('backgroundFlushing',{}).get('total_ms',0),
+                             'backFlush_average_ms': status.get('backgroundFlushing',{}).get('average_ms',0),
+                             'backFlush_last_ms': status.get('backgroundFlushing',{}).get('last_ms',0),
                              # cluster
                              # cursors
-                             'cursors_totalOpen': status['cursors']['totalOpen'],
-                             'cursors_timedOut': status['cursors']['timedOut'],
+                             'cursors_totalOpen': status.get('cursors',{}).get('totalOpen',0),
+                             'cursors_timedOut': status.get('cursors',{}).get('timedOut',0),
                              # asserts
-                             'asserts_msg': status['asserts']['msg'],
-                             'asserts_regular': status['asserts']['regular'],
-                             'asserts_warning': status['asserts']['warning'],
-                             'asserts_user': status['asserts']['user'],
-                             'asserts_rollovers': status['asserts']['rollovers']
+                             'asserts_msg': status.get('asserts',{}).get('msg',0),
+                             'asserts_regular': status.get('asserts',{}).get('regular',0),
+                             'asserts_warning': status.get('asserts',{}).get('warning',0),
+                             'asserts_user': status.get('asserts',{}).get('user',0),
+                             'asserts_rollovers': status.get('asserts',{}).get('rollovers',0)
         })
 
         for key in mongo_status.keys():
@@ -322,25 +322,33 @@ class ServiceMonitor(Monitor):
 
         for redis_process in [x
                               for x in psutil.process_iter()
-                              if len(x.cmdline()) > 0 and re.search(r"redis-server(-\d*)?$",
-                                                                    os.path.basename(x.cmdline()[0]))]:
-            redis_ip, redis_port = sorted([laddr.laddr
-                                           for laddr in redis_process.get_connections()
-                                           if laddr.status == 'LISTEN'])[0]
+                              if len(x.cmdline()) > 0 and os.path.basename(x.exe()) =='redis-server']:
+            try:
+                redis_ip, redis_port = sorted([laddr.laddr
+                                               for laddr in redis_process.get_connections()
+                                               if laddr.status == 'LISTEN'])[0]
+            except:
+                continue
             redis_passwd = ''
-            if os.path.isfile(redis_process.cmdline()[1]):
+            if len(redis_process.cmdline())>1 and  os.path.isfile(redis_process.cmdline()[1]):
                 with open(redis_process.cmdline()[1], 'r') as f:
                     for line in f.readlines():
                         if re.search('^requirepass', line):
                             redis_passwd = line.split()[1]
             else:
                 for root_dir, dirs, files in os.walk(redis_conf_path_root):
-                    for file in files:
-                        if str(file) == 'redis.conf' and re.search(redis_port, str(root_dir)):
-                            with open(os.path.join(root_dir, file), 'r') as f:
-                                for line in f.read():
-                                    if re.search('^requirepass', line):
-                                        redis_passwd = line.split()[1]
+                    if 'redis.conf' in files:
+                        with open(os.path.join(root_dir,'redis.conf'),'r') as f:
+                            passwd=None
+                            port=None
+                            for line in f.readlines():
+                                if re.search('^requirepass', line):
+                                    passwd = line.split()[1]
+                                if re.search('^port',line):
+                                    port=line.split()[1]
+                            if passwd and port and str(redis_port)==port:
+                                redis_passwd=str(passwd)
+                                break
             redises.append([redis_ip, redis_port, redis_passwd])
         return redises
 
@@ -417,8 +425,8 @@ class ServiceMonitor(Monitor):
             slave_lists = set()
             for i in range(redis_stats['connected_slaves']):
                 if d.has_key("slave%s" % i):
-                    slave_lists.add(d["slave%s" % i])
-            redis_stats['slave_lists'] = '\n'.join(list(slave_lists))
+                    slave_lists.add(str(d["slave%s" % i]))
+            redis_stats['slave_lists'] = ','.join(list(slave_lists))
         return redis_stats
 
 
