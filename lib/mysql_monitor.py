@@ -12,36 +12,6 @@ from MySQLdb.cursors import Cursor, DictCursor
 # http://www.percona.com/doc/percona-monitoring-plugins/1.0/cacti/mysql-templates.html
 
 class MySQL_Monitor(object):
-    # sections_struct=[
-    #     #{'title':'BACKGROUND THREAD',
-    #      #'reg':None
-    #      #},
-    #     {'title':'SEMAPHORES',
-    #      'bound':r"[FILE I/O|TRANSACTIONS]",
-    #      },
-    #     {'title':'FILE I/O',
-    #      'bound':'INSERT BUFFER AND ADAPTIVE HASH INDEX',
-    #      },
-    #     {'title':'INSERT BUFFER AND ADAPTIVE HASH INDEX',
-    #      'bound':'LOG',
-    #      },
-    #     {'title':'LOG',
-    #      'bound':'BUFFER POOL AND MEMORY',
-    #      },
-    #     {'title':'BUFFER POOL AND MEMORY',
-    #      'bound':'[INDIVIDUAL BUFFER POOL INFO|ROW OPERATIONS]',
-    #      },
-    #     {'title':'INDIVIDUAL BUFFER POOL INFO', #mysql 5.6
-    #      'bound':'ROW OPERATIONS',
-    #      },
-    #     {'title':'ROW OPERATIONS',
-    #      'bound':'[TRANSACTIONS|END OF INNODB MONITOR OUTPUT]'
-    #      },
-    #     {'title':'TRANSACTIONS',
-    #      'bound':'[END OF INNODB MONITOR OUTPUT|FILE I/O]'
-    #      }
-    # ]
-
     @classmethod
     def _get_innodb_status(cls, text):
         """
@@ -544,26 +514,52 @@ class MySQL_Monitor(object):
             res = cls._run_query("SHOW VARIABLES", conn)
             if res and len(res) > 0:
                 status.update(cls._change_dict_value_to_int(dict(res)))
+            # select query cache hits ratio
+            status['qcache_hits_ratio']=float(status.get('Qcache_hits',0))/float(status.get('Qcache_hits',1)+status.get('Com_select',0))*100
+            #
+            status['thread_connected_ratio']=float(status.get('Threads_connected',0))/float(status.get('max_connections',1))*100.0
+            # key buffer miss ratio
+            # 0.1%以下都很好(每1000个请求有一个直接读硬盘)
+            # 在0.01%以下的话，key_buffer_size分配的过多，可以适当减少
+            status['key_buffer_miss_ratio']=float(status.get('Key_reads',0))/float(status.get('Key_read_requests',1))*100.0
+            # key block used ratio Key_blocks_used
+            # Key_blocks_unused表示未使用的缓存簇(blocks)数，Key_blocks_used表示曾经用到的最大的blocks数，
+            # 比如这台服务器，所有的缓存都用到了，要么增加key_buffer_size，要么就是过渡索引了，把缓存占满了
+            # 比较理想的设置: ≈ 80%
+            status['key_block_used_ratio']=float(status.get('Key_blocks_used',0))/float(status.get('Key_blocks_used',0)+status.get('Key_blocks_unused',1))*100
+            # temp disk table ratio
+            # 每次创建临时表，Created_tmp_tables增加，如果是在磁盘上创建临时表，
+            # Created_tmp_disk_tables也增加,Created_tmp_files表示MySQL服务创建的临时文件文件数，
+            # 比较理想的配置是 <= 25%
+            status['created_tmp_disk_table_ratio']=float(status.get('Created_tmp_disk_tables',0))/float(status.get('Created_tmp_tables'))*100.0
+            # open tables ratio
+            # Open_tables表示打开表的数量，Opened_tables表示打开过的表数量，如果Opened_tables数量过大，
+            # 说明配置中table_cache(5.1.3之后这个值叫做table_open_cache)值可能太小，我们查询一下服务器table_cache值
+            # 比较合适: >= 85%
+            status['open_table_ratio']=float(status.get('Open_tables',0))/float(status.get('Opened_tables'),1)*100
+            #
             # slave-running
             # slave-lag
             # slave-stopped
             # slave-running
             # relay-log-space
             #
-            res = cls._run_query("show slave status", conn, DictCursor)
-            if res and len(res) > 0:
-                # Must lowercase keys because different MySQL versions have different lettercase.
-                slave_status = {key.lower(): val for key, val in res[0].iteritems()}
-                status.update(cls._change_dict_value_to_int(slave_status))
-                status['slave_lag'] = status['seconds_behind_master']
-                status['slave_running'] = status['slave_lag'] if status['slave_sql_running'] == 'YES' else 0
-                status['slave_stopped'] = 0 if status['slave_sql_running'] else status['slave_lag']
-            else:
-                status['slave_lag'] = 0
-                status['slave_running'] = 0
-                status['slave_stopped'] = 0
-                status['slave_sql_running'] = 'NULL'
-                status['relay_log_space'] = 0
+            status['slave_running']=status['slave_running']=='ON' and 1 or 0
+            status['slave_sql_running']='NULL'
+            status['slave_io_running']='NULL'
+            status['slave_lag'] = 0
+            status['relay_log_space'] = 0
+            if status['slave_running'] == 1:
+                res = cls._run_query("show slave status", conn, DictCursor)
+                if res and len(res) > 0:
+                    # Must lowercase keys because different MySQL versions have different lettercase.
+                    slave_status = {key.lower(): val for key, val in res[0].iteritems()}
+                    status.update(cls._change_dict_value_to_int(slave_status))
+                    if status.get('slave_sql_running','NULL') != 'YES' or status.get('slave_io_running','NULL') == 'YES':
+                        status['slave_running']=-1
+                        status['slave_lag'] = 0
+                    else:
+                        status['slave_lag'] = status.get('seconds_behind_master',0)
             res = cls._run_query("SHOW MASTER LOGS", conn)
             if res and len(res) > 0:
                 status['binary_log_space'] = sum([int(i[1]) for i in res])
