@@ -514,30 +514,66 @@ class MySQL_Monitor(object):
             res = cls._run_query("SHOW VARIABLES", conn)
             if res and len(res) > 0:
                 status.update(cls._change_dict_value_to_int(dict(res)))
-            # select query cache hits ratio
-            status['qcache_hits_ratio']=float(status.get('Qcache_hits',0))/float(status.get('Qcache_hits',1)+status.get('Com_select',0))*100
-            #
-            status['thread_connected_ratio']=float(status.get('Threads_connected',0))/float(status.get('max_connections',1))*100.0
-            # key buffer miss ratio
+
+            #thread cache hit rate
+            status['thread_cache_hit_rate']=(1-float(status.get('Threads_created',0)/status.get('Connections',0)))*100.0
+            # WARNING : < 95% CRITICAL : < 90%
+            status['thread_connected_rate']=float(status.get('Threads_connected',0))/status.get('max_connections',1)*100.0
+            # key buffer miss rate
             # 0.1%以下都很好(每1000个请求有一个直接读硬盘)
             # 在0.01%以下的话，key_buffer_size分配的过多，可以适当减少
-            status['key_buffer_miss_ratio']=float(status.get('Key_reads',0))/float(status.get('Key_read_requests',1))*100.0
+            status['key_buffer_hit_rate']=(1-float(status.get('Key_reads',0))/status.get('Key_read_requests',1))*100.0
             # key block used ratio Key_blocks_used
             # Key_blocks_unused表示未使用的缓存簇(blocks)数，Key_blocks_used表示曾经用到的最大的blocks数，
             # 比如这台服务器，所有的缓存都用到了，要么增加key_buffer_size，要么就是过渡索引了，把缓存占满了
             # 比较理想的设置: ≈ 80%
-            status['key_block_used_ratio']=float(status.get('Key_blocks_used',0))/float(status.get('Key_blocks_used',0)+status.get('Key_blocks_unused',1))*100
-            # temp disk table ratio
-            # 每次创建临时表，Created_tmp_tables增加，如果是在磁盘上创建临时表，
-            # Created_tmp_disk_tables也增加,Created_tmp_files表示MySQL服务创建的临时文件文件数，
+            status['key_block_used_rate']=float(status.get('Key_blocks_used',0))/(status.get('Key_blocks_used',0)+status.get('Key_blocks_unused',1))*100
+            # 磁盘上创建临时表的比例
+            # 每次创建临时表，Created_tmp_tables增加，如果是在磁盘上创建临时表
+            # Created_tmp_disk_tables也增加,Created_tmp_files表示MySQL服务创建的临时文件文件数
             # 比较理想的配置是 <= 25%
-            status['created_tmp_disk_table_ratio']=float(status.get('Created_tmp_disk_tables',0))/float(status.get('Created_tmp_tables'))*100.0
-            # open tables ratio
+            status['created_tmp_disk_table_rate']=float(status.get('Created_tmp_disk_tables',0))/status.get('Created_tmp_tables',1)*100.0
+            # 表缓存命中率
             # Open_tables表示打开表的数量，Opened_tables表示打开过的表数量，如果Opened_tables数量过大，
             # 说明配置中table_cache(5.1.3之后这个值叫做table_open_cache)值可能太小，我们查询一下服务器table_cache值
             # 比较合适: >= 85%
-            status['open_table_ratio']=float(status.get('Open_tables',0))/float(status.get('Opened_tables'),1)*100
-            #
+            status['open_table_hit_rate']=float(status.get('Open_tables',0))/status.get('Opened_tables',1)*100.0
+            # 表缓存使用率
+            # 首先判断使用率，如果使用率<95%则表示状态正常；假如使用率>=95%则开始判断命中率，命中率阀值判断如下：
+            status['open_table_usage_rate']=float(status.get('Open_tables',0))/status.get('table_open_cache',1)*100.0
+            # query cache fragment ratio
+            # 如果查询缓存碎片率超过20%，可以用FLUSH QUERY CACHE整理缓存碎片
+            status['qcache_fragment_rate']=float(status.get('Qcache_free_blocks',0))/status.get('Qcache_total_blocks',1)*100.0
+
+            # query cache usage ratio
+            # 查询缓存利用率在25%以下的话说明query_cache_size设置的过大，可适当减小;
+            # 查询缓存利用率在80%以上而且Qcache_lowmem_prunes > 50的话说明query_cache_size可能有点小，要不就是碎片太多
+            status['qcache_usage_rate']=float(status.get('query_cache_size',0)-status.get('Qcache_free_memory',0))/status.get('query_cache_size',1)*100
+
+            # select query cache hits rate
+            # mysql administrator: ([Qcache_hits]/([Qcache_hits]+[QCache_inserts]+[QCache_not_cached]))*100
+            status['qcache_hit_rate']=float(status.get('Qcache_hits',0))/(status.get('Qcache_hits',1)+status.get('Qcache_inserts',0))*100.0
+
+            # InnoDB缓存命中率
+            # WARNING : < 95% CRITICAL : < 85%
+            # 命中率太低说明innodb_buffer_pool_size设置太低，innodb_buffer_pool_size里面缓存了InnoDB引擎表的索引和数据，内存不足时查询只能从硬盘读取索引与数据，查询效率下降
+            status['innodb_buffer_pool_hit_rate']=(1-float(status.get('Innodb_buffer_pool_reads',0))/status.get('Innodb_buffer_pool_read_requests',1))*100.0
+            # 表扫描使用索引比例
+            # 当发生故障告警时表示超过一半的查询请求不使用索引或者索引使用不正确。
+            status['index_usage_rate']=(1-float(status.get('Handler_read_rnd',0))/status.get('Handler_read_first',1)
+                                        +status.get('Handler_read_key',1)+status.get('Handler_read_next',1)+
+                                        status.get('Handler_read_prev',1)+status.get('Handler_read_rnd',1)+
+                                        status.get('Handler_read_rnd_next',1))*100.0
+            # 发生表锁等待的次数比例
+            # WARNING : > 10% CRITICAL : > 30%
+            # 当发生告警说明表锁造成的阻塞比较严重，需要注意是否使用事务引擎吗，或者是注意是否发存在表扫描更新的情况
+            status['table_lock_wait_rate']=float(status.get('Table_locks_waited',0))/status.get('Table_locks_immediate',1)*100.0
+
+            # binlog日志缓存写在磁盘上的比例
+            # WARNING : > 5% CRITICAL : > 10%
+            # binlog_cache_size太小或者binlog生成太快，binlog缓存不够只能写在硬盘上。
+            status['binlog_cache_disk_rate']=float(status.get('Binlog_stmt_cache_disk_use',0))/status.get('Binlog_cache_use',1)*100.0
+
             # slave-running
             # slave-lag
             # slave-stopped
