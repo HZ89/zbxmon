@@ -69,7 +69,7 @@ class Monitor(object):
     # def __enter__(self):    # In testing
     # return self
     #
-    #def __exit__(self, exc_type, exc_val, exc_tb):    # In testing
+    # def __exit__(self, exc_type, exc_val, exc_tb):    # In testing
     #    if exc_type is None:
     #        self.__del__()
     #    else:

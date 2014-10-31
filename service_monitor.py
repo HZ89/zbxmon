@@ -5,13 +5,14 @@ __author__ = 'Harrison'
 import os
 import sys
 
-sys.path.extend(os.path.realpath(__file__))
+sys.path.extend(os.path.join(os.path.realpath(__file__), 'lib'))
+sys.path.extend(os.path.join(os.path.realpath(__file__)))
 
 from monitor import Monitor
 from functools import partial
 from argh import ArghParser, arg
 import argparse
-from lib.mysql_monitor import MySQL_Monitor
+from mysql_monitor import MySQL_Monitor
 
 # TODO:Completion script comments
 
@@ -89,7 +90,7 @@ class ServiceMonitor(Monitor):
     # """
     # find local php-fpm process from config files
     # @param args: first value is config dir root, second value is regular used for find php-fpm config file
-    #     @return:
+    # @return:
     #     """
     #     import ConfigParser
     #     config_path = args[0]
