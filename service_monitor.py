@@ -1,12 +1,12 @@
 #!/opt/17173_install/python-2.7.6/bin/python2.7
-# coding:utf-8
+#coding:utf-8
 __author__ = 'Harrison'
 
 import os
 import sys
 
-sys.path.extend(os.path.join(os.path.realpath(__file__), 'lib'))
-sys.path.extend(os.path.join(os.path.realpath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib'))
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from monitor import Monitor
 from functools import partial
@@ -16,6 +16,8 @@ from mysql_monitor import MySQL_Monitor
 
 # TODO:Completion script comments
 
+# UserParameter=service.status[*],/opt/17173_install/zabbix-2.4.1/externalscripts/service_monitor.py --service=$1 --item=$2 --instance=$3 --extend=$4
+# UserParameter=service.discovery[*],/opt/17173_install/zabbix-2.4.1/externalscripts/service_monitor.py  --service=$1 --discovery --macros=$2 --extend=$3
 
 class ServiceMonitor(Monitor):
     def __init__(self, service, instance=None, cache_path=None):
@@ -239,6 +241,7 @@ class ServiceMonitor(Monitor):
         db = pymongo.MongoClient(uri)
         coll = db.admin
         status = coll.command('serverStatus', 1)
+
         db.disconnect()
         mongo_status = {}
 

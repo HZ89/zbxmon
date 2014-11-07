@@ -514,7 +514,7 @@ class MySQL_Monitor(object):
             res = cls._run_query("SHOW VARIABLES", conn)
             if res and len(res) > 0:
                 status.update(cls._change_dict_value_to_int(dict(res)))
-
+            # TODO: 脏页数据
             # thread cache hit rate
             status['thread_cache_hit_rate'] = '{0:.2f}'.format(
                 (1 - float(status.get('Threads_created', 0)) / status.get('Connections', 0)) * 100.0)
@@ -573,13 +573,14 @@ class MySQL_Monitor(object):
             # 表扫描使用索引比例
             # 当发生故障告警时表示超过一半的查询请求不使用索引或者索引使用不正确。
             status['index_usage_rate'] = '{0:.2f}'.format((1 - (
-            float(status.get('Handler_read_rnd', 0) + status.get('Handler_read_rnd_next', 0))) / (
+                                                    float(status.get('Handler_read_rnd', 0)
+                                                    + status.get('Handler_read_rnd_next', 0))) / (
                                                            status.get('Handler_read_first', 1)
-                                                           + status.get('Handler_read_key', 1) + status.get(
-                                                               'Handler_read_next', 1) +
-                                                           status.get('Handler_read_prev', 1) + status.get(
-                                                               'Handler_read_rnd', 1) +
-                                                           status.get('Handler_read_rnd_next', 1))) * 100.0)
+                                                           + status.get('Handler_read_key', 1)
+                                                           + status.get('Handler_read_next', 1)
+                                                           + status.get('Handler_read_prev', 1)
+                                                           + status.get('Handler_read_rnd', 1)
+                                                           +status.get('Handler_read_rnd_next', 1))) * 100.0)
             # 发生表锁等待的次数比例
             # WARNING : > 10% CRITICAL : > 30%
             # 当发生告警说明表锁造成的阻塞比较严重，需要注意是否使用事务引擎吗，或者是注意是否发存在表扫描更新的情况
@@ -691,6 +692,11 @@ class MySQL_Monitor(object):
                 # unflushed log bytes spikes a lot sometimes and it's impossible for it to
                 # be more than the log buffer.
                 status['unflushed_log'] = max([status['unflushed_log'], status['innodb_log_buffer_size']])
+            # TPS QPS
+            status['questions']=status.get('Com_select',0)+status.get('Com_update',0)+status.get('Com_insert',0)+status.get('Com_delete',0)
+            status['transactions']=status.get('Com_update',0)+status.get('Com_insert',0)+status.get('Com_delete',0)
+            # innodb dead locks
+            status['innodb_deadlocks']=status.get('nnodb_deadlocks',0)
             # Define the variables to output.  I use shortened variable names so maybe
             # it'll all fit in 1024 bytes for Cactid and Spine's benefit.  Strings must
             # have some non-hex characters (non a-f0-9) to avoid a Cacti bug.  This list
