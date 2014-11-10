@@ -600,22 +600,20 @@ class MySQL_Monitor(object):
             # relay-log-space
             #
             status['Slave_running'] = status['Slave_running'] == 'ON' and 1 or 0
-            status['Slave_SQL_Running'] = 'NULL'
-            status['Slave_IO_Running'] = 'NULL'
-            status['slave_lag'] = 0
+            status['Slave_SQL_Running'] = 0
+            status['Slave_IO_Running'] = 0
+            status['slave_lag'] = -1
             status['Relay_Log_Space'] = 0
             if status['Slave_running'] == 1:
                 res = cls._run_query("show slave status", conn, DictCursor)
                 if res and len(res) > 0:
                     # Must lowercase keys because different MySQL versions have different lettercase.
-                    slave_status = {key.lower(): val for key, val in res[0].iteritems()}
+                    slave_status = {key: val for key, val in res[0].iteritems()}
+                    slave_status['Slave_SQL_Running']= str(slave_status.get('Slave_SQL_Running','NO')).lower()=='yes' and 1 or 0
+                    slave_status['Slave_IO_Running']= str(slave_status.get('Slave_IO_Running','NO')).lower()=='yes' and 1 or 0
+                    slave_status['slave_lag'] = str(slave_status.get('Seconds_Behind_Master', 0)).lower()=='null' and 0 or slave_status.get('Seconds_Behind_Master', 0)
                     status.update(cls._change_dict_value_to_int(slave_status))
-                    if status.get('Slave_SQL_Running', 'NULL') != 'YES' or status.get('Slave_IO_Running',
-                                                                                      'NULL') == 'YES':
-                        status['Slave_running'] = -1
-                        status['slave_lag'] = 0
-                    else:
-                        status['slave_lag'] = status.get('Seconds_Behind_Master', 0)
+
             res = cls._run_query("SHOW MASTER LOGS", conn)
             if res and len(res) > 0:
                 status['binary_log_space'] = sum([int(i[1]) for i in res])
