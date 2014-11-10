@@ -200,7 +200,7 @@ class Monitor(object):
         self._cache_file.flush()
 
     @classmethod
-    def _get_ip_port(cls, proc_name):
+    def get_ip_port(cls, proc_name):
         """
         cut ip,port from proc
         @param proc_name: the process name you want
@@ -258,7 +258,7 @@ class Monitor(object):
             assert hasattr(discovery_func, '__call__'), 'discovery_func must can be callable'
             data = discovery_func()
         else:
-            data = Monitor._get_ip_port(procname)
+            data = Monitor.get_ip_port(procname)
 
         for instance in data:
             tmp_dict = {}

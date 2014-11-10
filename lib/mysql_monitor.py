@@ -1,5 +1,5 @@
 #!/opt/17173_install/python-2.7.6/bin/python2.7
-# coding:utf-8
+# -*- coding: utf8 -*-
 __author__ = 'Justin Ma'
 __verion__ = '0.5.0'
 import os, sys
@@ -7,9 +7,33 @@ import string
 import re
 import MySQLdb
 import traceback
+from monitor import Monitor
 from MySQLdb.cursors import Cursor, DictCursor
 
 # http://www.percona.com/doc/percona-monitoring-plugins/1.0/cacti/mysql-templates.html
+
+
+def discovery_mysql(*args):
+    import psutil
+    result = []
+    for proc in [i for i in psutil.process_iter() if i.name() == 'mysqld']:
+        listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
+        if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
+            listen[0] = Monitor._get_local_ip()
+        sock_path = os.path.join(proc.cwd(), 'mysql.sock')
+        if MySQL_Monitor.mysql_ping(host=str(listen[0]), port=int(listen[1]), user=args[0], passwd=args[1]) == -1:
+            res = MySQL_Monitor.grant_monitor_user(socket=sock_path, user=args[0], host=str(listen[0]),
+                                                   passwd=args[1])
+        result.append([str(listen[0]), str(listen[1])])
+    return result
+
+
+def get_mysql_data(instance_name='', *args):
+    host, port = instance_name.split('/') if instance_name.find('/') != -1 else ('', '')
+    user, passwd, socket = ('', '', args[0]) if len(args) == 1 else [args[0], args[1], None] if len(
+        args) == 2 else [None, None, None]
+    return MySQL_Monitor.get_monitor_data(host=host, port=port, user=user, passwd=passwd, socket=socket)
+
 
 class MySQL_Monitor(object):
     @classmethod
