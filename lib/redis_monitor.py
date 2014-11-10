@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 __author__ = 'Harrison'
 
+import os,sys
 import redis
 import re
 import psutil
@@ -25,7 +26,7 @@ def discovery_redis():
         redis_passwd = ''
         config_files = []
         if os.path.isdir(redis_process.getcwd()):
-            config_files.append(redis_process.getcwd() + redis_conf_file_name)
+            config_files.append(os.path.join(redis_process.getcwd() , redis_conf_file_name))
         elif len(redis_process.cmdline()) > 1 and os.path.isfile(redis_process.cmdline()[1]):
             config_files.append(redis_process.cmdline()[1])
         else:

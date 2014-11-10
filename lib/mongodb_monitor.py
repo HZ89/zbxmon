@@ -18,7 +18,7 @@ def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
     status = None
     rs_status = None
     try:
-        coll.command('serverStatus', 1)
+        status=coll.command('serverStatus', 1)
     except:
         pass
     try:
