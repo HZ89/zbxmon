@@ -130,15 +130,16 @@ def main(args):
     if args.extend:
         arg_list = args.extend.split('/')
 
+    monitor = ServiceMonitor(args.service, cache_path=args.cache if args.cache else None)
+
     if args.discovery:
-        print ServiceMonitor.discovery(args.service, args.macros.split('/'), *arg_list)
+        print monitor.discovery(args.macros.split('/'), *arg_list)
     else:
-        monitor = ServiceMonitor(args.service, cache_path=args.cache if args.cache else None)
         if args.item:
-            print monitor.load_data(args.service, args.instance, args.item, *arg_list)
+            print monitor.load_data(args.instance, args.item, *arg_list)
         if args.list:
             print "Monitor Items (in %s)" % args.instance
-            for it in sorted(monitor.load_keys(args.service, args.instance, *arg_list)):
+            for it in sorted(monitor.load_keys(args.instance, *arg_list)):
                 print it
 
 
