@@ -4,7 +4,7 @@
 import pymongo
 
 
-def get_mongodb_data(self, instance_name, mongo_user, mongo_passwd):
+def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
     """
     the func used to get mongodb data
     @param instance_name: the ip:port of mongodb

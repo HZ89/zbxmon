@@ -4,7 +4,7 @@ __author__ = 'Harrison'
 import redis
 import re
 import psutil
-def discovery_redis(cls):
+def discovery_redis():
     """
     find redis instance
     @return: [(ip, prot, passwd)]
@@ -46,7 +46,7 @@ def discovery_redis(cls):
                 break
         redises.append([redis_ip, redis_port, redis_passwd])
     return redises
-def get_redis_data(self, instance_name, *args):
+def get_redis_data(instance_name, *args):
     """
     get monitor data from redis
     @param instance_name: ip:port:passwd
