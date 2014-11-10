@@ -28,7 +28,7 @@ class Monitor(object):
         self._cache_file_path = os.path.join(
             cache_path if cache_path and os.path.exists(cache_path) else os.getenv('TMPDIR', '/tmp'),
             hashlib.md5(os.uname()[1] + self._app).hexdigest() + '_monitor.tmp')
-        self.local_ip = self._get_local_ip()
+        self.local_ip = self.get_local_ip()
 
         try:
             self._cache_file = open(self._cache_file_path, "r+")
@@ -39,7 +39,7 @@ class Monitor(object):
             fcntl.lockf(self._cache_file.fileno(), LOCK_EX)
 
     @classmethod
-    def _get_local_ip(cls):
+    def get_local_ip(cls):
         # look for the local private ip
         addresses = []
         for iface_name in interfaces():
@@ -214,7 +214,7 @@ class Monitor(object):
                     listen = list(
                         sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
                     if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
-                        listen[0] = Monitor._get_local_ip()
+                        listen[0] = Monitor.get_local_ip()
                     result.append([str(listen[0]), str(listen[1])])
             except psutil.NoSuchProcess:
                 pass

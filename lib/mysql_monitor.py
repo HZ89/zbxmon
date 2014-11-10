@@ -19,7 +19,7 @@ def discovery_mysql(*args):
     for proc in [i for i in psutil.process_iter() if i.name() == 'mysqld']:
         listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
         if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
-            listen[0] = Monitor._get_local_ip()
+            listen[0] = Monitor.get_local_ip()
         sock_path = os.path.join(proc.cwd(), 'mysql.sock')
         if MySQL_Monitor.mysql_ping(host=str(listen[0]), port=int(listen[1]), user=args[0], passwd=args[1]) == -1:
             res = MySQL_Monitor.grant_monitor_user(socket=sock_path, user=args[0], host=str(listen[0]),

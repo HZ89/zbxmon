@@ -100,24 +100,12 @@ def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
                              'asserts_user': status.get('asserts', {}).get('user', 0),
                              'asserts_rollovers': status.get('asserts', {}).get('rollovers', 0)
         })
+    mongo_status['replset_delay']=0
     if rs_status:
-        rs_members = rs_status['members']
-        for member in rs_members:
-            if member['stateStr'] == 'PRIMARY':
-                (m_ip,m_port) = member['name'].split(':')
-                m_time = member['optime'].time
-                if m_ip == local_ip:
-                    return 0.0
-                    break
-                else:
-                    continue
-            else:
-                (s_ip,s_port) = member['name'].split(':')
-                if s_ip == local_ip:
-                    s_time = member['optime'].time
-                    s_delay = m_time - s_time
-                    return s_delay
-                    break
+        rs_members=[i['optime'] for i in rs_status['members'] if i['name']==instance_name or i['stateStr']=='PRIMARY']
+        if len(rs_members) == 2:
+            mongo_status['replset_delay']=abs(rs_members[0]-rs_members[1])
+
     for key in mongo_status.keys():
         mongo_status[key.lower()] = mongo_status.pop(key)
     return mongo_status
