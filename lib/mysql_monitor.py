@@ -572,22 +572,27 @@ class MySQL_Monitor(object):
             # 首先判断使用率，如果使用率<95%则表示状态正常；假如使用率>=95%则开始判断命中率，命中率阀值判断如下：
             status['open_table_usage_rate'] = '{0:.2f}'.format(
                 float(status.get('Open_tables', 0)) / status.get('table_open_cache', 1) * 100.0)
-            # query cache fragment ratio
-            # 如果查询缓存碎片率超过20%，可以用FLUSH QUERY CACHE整理缓存碎片
-            status['qcache_fragment_rate'] = '{0:.2f}'.format(
-                float(status.get('Qcache_free_blocks', 0)) / status.get('Qcache_total_blocks', 1) * 100.0)
+            if str(status.get('query_cache_type','OFF')).lower()=='on':
+                # query cache fragment ratio
+                # 如果查询缓存碎片率超过20%，可以用FLUSH QUERY CACHE整理缓存碎片
+                status['qcache_fragment_rate'] = '{0:.2f}'.format(
+                    float(status.get('Qcache_free_blocks', 0)) / status.get('Qcache_total_blocks', 1) * 100.0)
 
-            # query cache usage ratio
-            # 查询缓存利用率在25%以下的话说明query_cache_size设置的过大，可适当减小;
-            # 查询缓存利用率在80%以上而且Qcache_lowmem_prunes > 50的话说明query_cache_size可能有点小，要不就是碎片太多
-            status['qcache_usage_rate'] = '{0:.2f}'.format(
-                float(status.get('query_cache_size', 0) - status.get('Qcache_free_memory', 0)) / status.get(
-                    'query_cache_size', 1) * 100)
+                # query cache usage ratio
+                # 查询缓存利用率在25%以下的话说明query_cache_size设置的过大，可适当减小;
+                # 查询缓存利用率在80%以上而且Qcache_lowmem_prunes > 50的话说明query_cache_size可能有点小，要不就是碎片太多
+                status['qcache_usage_rate'] = '{0:.2f}'.format(
+                    float(status.get('query_cache_size', 0) - status.get('Qcache_free_memory', 0)) / status.get(
+                        'query_cache_size', 1) * 100)
 
-            # select query cache hits rate
-            # mysql administrator: ([Qcache_hits]/([Qcache_hits]+[QCache_inserts]+[QCache_not_cached]))*100
-            status['qcache_hit_rate'] = '{0:.2f}'.format(float(status.get('Qcache_hits', 0)) / (
-            status.get('Qcache_hits', 1) + status.get('Qcache_inserts', 0)) * 100.0)
+                # select query cache hits rate
+                # mysql administrator: ([Qcache_hits]/([Qcache_hits]+[QCache_inserts]+[QCache_not_cached]))*100
+                status['qcache_hit_rate'] = '{0:.2f}'.format(float(status.get('Qcache_hits', 0)) / (
+                status.get('Qcache_hits', 1) + status.get('Qcache_inserts', 0)) * 100.0)
+            else:
+                status['qcache_fragment_rate']='0.0'
+                status['qcache_usage_rate']='0.0'
+                status['qcache_hit_rate']='0.0'
 
             # InnoDB缓存命中率
             # WARNING : < 95% CRITICAL : < 85%
