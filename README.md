@@ -10,7 +10,7 @@ zabbix_service_monitor_script
 *  --service SERVICE, -S SERVICE the service name of monitor
 *  --instance INSTANCE, -I INSTANCE the name of the instance you want
 *  --item ITEM, -K ITEM  the item of you want
-*  --macros MACROS, -M MACROS the macro list, used to build discovery data eg:p1,p2,p3
+*  --macros MACROS, -M MACROS the macro list, used to build discovery data eg:p1/p2/p3
 *  --extend EXTEND, -E EXTEND extend args eg. p/p1/p2
 *  --cache CACHE, -C CACHE cache path
 *  --list, -L            list monitor items for this instance
