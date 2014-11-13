@@ -36,7 +36,7 @@ has_extend=True
 
 # Constants
 ZABBIX_VERSION = '2.0'
-ZABBIX_SCRIPT_PATH = '/opt/17173_install/zabbix-%s/externalscripts/service_monitor.py' % ZABBIX17173
+ZABBIX_SCRIPT_PATH = '/opt/17173_install/zabbix-%s/externalscripts/script.py' % ZABBIX17173
 
 item_types = {'Zabbix agent': 0,
               'Zabbix agent (active)': 7,
@@ -630,4 +630,4 @@ elif output == 'config':
     print "UserParameter=service.status[*],%s --service=$1 --item=$2 --instance=$3 --extend=$4,$5 " % ZABBIX_SCRIPT_PATH
 
     # Write extra items
-    #print "UserParameter=%s[*],%s/service_monitor.py --service=mysql --instance=$1,$2 --extend=$3,$4 --item=running-slave" % (format_item('running-slave'), ZABBIX_SCRIPT_PATH)
+    #print "UserParameter=%s[*],%s/script.py --service=mysql --instance=$1,$2 --extend=$3,$4 --item=running-slave" % (format_item('running-slave'), ZABBIX_SCRIPT_PATH)

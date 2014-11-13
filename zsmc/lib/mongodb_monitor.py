@@ -3,6 +3,7 @@
 
 import pymongo
 
+BINNAME = 'mongod'
 
 def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
     """

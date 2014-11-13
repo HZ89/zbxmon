@@ -2,21 +2,26 @@
 # -*- coding: utf8 -*-
 __author__ = 'Justin Ma'
 __verion__ = '0.5.0'
-import os, sys
+import os
+import sys
 import string
 import re
 import MySQLdb
 import traceback
-from monitor import Monitor
 from MySQLdb.cursors import Cursor, DictCursor
+
+from zsmc.monitor import Monitor
+
+
 
 # http://www.percona.com/doc/percona-monitoring-plugins/1.0/cacti/mysql-templates.html
 
+BINNAME = 'mysqld'
 
 def discovery_mysql(*args):
     import psutil
     result = []
-    for proc in [i for i in psutil.process_iter() if i.name() == 'mysqld']:
+    for proc in [i for i in psutil.process_iter() if i.name() == BINNAME]:
         listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
         if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
             listen[0] = Monitor.get_local_ip()

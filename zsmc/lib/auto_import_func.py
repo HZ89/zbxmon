@@ -13,4 +13,9 @@ def get_func_list(service):
 
     get_data_func = getattr(mod, 'get_{}_data'.format(service))
 
-    return get_data_func, discovery_func
+    try:
+        bin_name = getattr(mod, 'BINNAME')
+    except AttributeError:
+        bin_name = None
+
+    return get_data_func, discovery_func, bin_name

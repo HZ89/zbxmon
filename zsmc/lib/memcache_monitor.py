@@ -2,6 +2,7 @@
 
 import memcache
 
+BINNAME = 'memcached'
 
 def get_memcache_data(instance_name):
     """

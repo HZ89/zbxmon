@@ -5,6 +5,9 @@ import os,sys
 import redis
 import re
 import psutil
+
+BINNAME = 'redis-server'
+
 def discovery_redis():
     """
     find redis instance
@@ -16,7 +19,7 @@ def discovery_redis():
     redis_conf_file_name = 'redis.conf'
     for redis_process in [x
                           for x in psutil.process_iter()
-                          if len(x.cmdline()) > 0 and os.path.basename(x.exe()) == 'redis-server']:
+                          if len(x.cmdline()) > 0 and os.path.basename(x.exe()) == BINNAME]:
         try:
             redis_ip, redis_port = sorted([laddr.laddr
                                            for laddr in redis_process.get_connections()

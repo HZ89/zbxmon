@@ -10,19 +10,21 @@ import psutil
 from netifaces import interfaces, ifaddresses, AF_INET
 from functools import partial
 from fcntl import LOCK_EX, LOCK_UN
+from zsmc.lib.auto_import_func import get_func_list
 from re import search
 
 
 class Monitor(object):
-    def __init__(self, app, cache_path=None):
+    def __init__(self, service, instance=None, cache_path=None):
 
         """
         @param app: type of str, name of your monitor app
         @return: object of Monitor
         """
-
+        self.service = service
         self._data = {'file_info': {'file': 'default'}}
-        self._app = app
+        self._app = self.service + '_' + instance if instance else 'default'
+        self.get_data_func, self.discovery_func, self.bin_name = get_func_list(self.service)
         self._result = {'data': []}
         # self._fs = ':'
         self._cache_file_path = os.path.join(
@@ -132,7 +134,7 @@ class Monitor(object):
 
     def get_keys(self, instance, get_monitor_data_func=None):
         """
-        get item data from instance
+        get item keys from instance
         @param instance: the instance you want get data
         @param get_monitor_data_func: this func used for get monitor data from each instances
         @return:
@@ -277,3 +279,48 @@ class Monitor(object):
         @return: must be dict key by "ip:port"
         """
         return None
+
+    def load_data(self, instance, item=None, *args):
+        """
+        auto load func to get monitor data
+        @param service: the name of service
+        @param instance: string of the instance like ip:port or /dev/sda etc.
+        @param is_discovery: is a zabbix low level discovery action
+        @param args: other args like the args of func get_XXX_data
+        @return: string
+        """
+
+        get_func = partial(self.get_data_func, instance)
+
+        # add args
+        if args:
+            get_func = partial(get_func, *args)
+        return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
+
+    def load_keys(self, instance, *args):
+        """
+        auto load func to get monitor keys
+        @param service: the name of service
+        @param instance: string of the instance like ip:port or /dev/sda etc.
+        @param is_discovery: is a zabbix low level discovery action
+        @param args: other args like the args of func get_XXX_data
+        @return: string
+        """
+
+        get_func = partial(self.get_data_func, instance)
+        # add args
+        if args:
+            get_func = partial(get_func, *args)
+
+        keys = self.get_keys(instance=instance, get_monitor_data_func=get_func)
+        return keys
+
+    def discovery(self, macro_name_list, *args):
+
+        if self.discovery_func:
+            discovery_func = self.discovery_func
+            if args:
+                discovery_func = partial(discovery_func, *args)
+        else:
+            discovery_func = partial(Monitor.get_ip_port, self.bin_name)
+        return Monitor.get_discovery_data(macro_name_list, discovery_func)
