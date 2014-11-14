@@ -19,7 +19,7 @@ This project is used for get some services status data in zabbix agent
 ##Zabbix LLD
     zbxmon --discovery --macros MYSQLIP/MYSQLPORT --service mysql --extend zabbixmonitor/zabbixmonitor
 The 'zabbixmonitor' is user/password of mysql, if it can not access mysql, we will try use the sock file to accessing 
-mysql, and add this user  
+mysql, and add this user    
 output:
     
     {
