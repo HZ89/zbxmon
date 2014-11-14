@@ -10,25 +10,27 @@ import psutil
 from netifaces import interfaces, ifaddresses, AF_INET
 from functools import partial
 from fcntl import LOCK_EX, LOCK_UN
+from zsmc.lib.auto_import_func import get_func_list
 from re import search
 
 
 class Monitor(object):
-    def __init__(self, app, cache_path=None):
+    def __init__(self, service, instance=None, cache_path=None):
 
         """
         @param app: type of str, name of your monitor app
         @return: object of Monitor
         """
-
+        self.service = service
         self._data = {'file_info': {'file': 'default'}}
-        self._app = app
+        self._app = self.service + '_' + instance if instance else 'default'
+        self.get_data_func, self.discovery_func, self.bin_name = get_func_list(self.service)
         self._result = {'data': []}
         # self._fs = ':'
         self._cache_file_path = os.path.join(
             cache_path if cache_path and os.path.exists(cache_path) else os.getenv('TMPDIR', '/tmp'),
             hashlib.md5(os.uname()[1] + self._app).hexdigest() + '_monitor.tmp')
-        self.local_ip = self._get_local_ip()
+        self.local_ip = self.get_local_ip()
 
         try:
             self._cache_file = open(self._cache_file_path, "r+")
@@ -39,7 +41,7 @@ class Monitor(object):
             fcntl.lockf(self._cache_file.fileno(), LOCK_EX)
 
     @classmethod
-    def _get_local_ip(cls):
+    def get_local_ip(cls):
         # look for the local private ip
         addresses = []
         for iface_name in interfaces():
@@ -67,9 +69,9 @@ class Monitor(object):
             self._cache_file.close()
 
     # def __enter__(self):    # In testing
-    #    return self
+    # return self
     #
-    #def __exit__(self, exc_type, exc_val, exc_tb):    # In testing
+    # def __exit__(self, exc_type, exc_val, exc_tb):    # In testing
     #    if exc_type is None:
     #        self.__del__()
     #    else:
@@ -132,7 +134,7 @@ class Monitor(object):
 
     def get_keys(self, instance, get_monitor_data_func=None):
         """
-        get item data from instance
+        get item keys from instance
         @param instance: the instance you want get data
         @param get_monitor_data_func: this func used for get monitor data from each instances
         @return:
@@ -150,7 +152,7 @@ class Monitor(object):
             self._make_cache(monitor_data)
         #    return monitor_data[instance][item]
 
-        return [] if not self._data.has_key(instance) else list(sorted(self._data[instance].keys()))
+        return {} if not self._data.has_key(instance) else self._data[instance]
 
 
     def _update_version(self, instance, item, item_list=None):
@@ -200,7 +202,7 @@ class Monitor(object):
         self._cache_file.flush()
 
     @classmethod
-    def _get_ip_port(cls, proc_name):
+    def get_ip_port(cls, proc_name):
         """
         cut ip,port from proc
         @param proc_name: the process name you want
@@ -208,11 +210,17 @@ class Monitor(object):
         """
 
         result = []
-        for proc in [i for i in psutil.process_iter() if i.name() == proc_name]:
-            listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
-            if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
-                listen[0] = Monitor._get_local_ip()
-            result.append([str(listen[0]), str(listen[1])])
+        for proc in psutil.process_iter():
+            try:
+                if proc.name() == proc_name:
+                    listen = list(
+                        sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
+                    if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
+                        listen[0] = Monitor.get_local_ip()
+                    result.append([str(listen[0]), str(listen[1])])
+            except psutil.NoSuchProcess:
+                pass
+
         return result
 
     # def _get_instance_list(self, procname=None, is_discovery=None, discovery_func=None):
@@ -252,7 +260,7 @@ class Monitor(object):
             assert hasattr(discovery_func, '__call__'), 'discovery_func must can be callable'
             data = discovery_func()
         else:
-            data = Monitor._get_ip_port(procname)
+            data = Monitor.get_ip_port(procname)
 
         for instance in data:
             tmp_dict = {}
@@ -271,3 +279,48 @@ class Monitor(object):
         @return: must be dict key by "ip:port"
         """
         return None
+
+    def load_data(self, instance, item=None, *args):
+        """
+        auto load func to get monitor data
+        @param service: the name of service
+        @param instance: string of the instance like ip:port or /dev/sda etc.
+        @param is_discovery: is a zabbix low level discovery action
+        @param args: other args like the args of func get_XXX_data
+        @return: string
+        """
+
+        get_func = partial(self.get_data_func, instance)
+
+        # add args
+        if args:
+            get_func = partial(get_func, *args)
+        return self.get_item(instance=instance, item=item, get_monitor_data_func=get_func)
+
+    def load_keys(self, instance, *args):
+        """
+        auto load func to get monitor keys
+        @param service: the name of service
+        @param instance: string of the instance like ip:port or /dev/sda etc.
+        @param is_discovery: is a zabbix low level discovery action
+        @param args: other args like the args of func get_XXX_data
+        @return: string
+        """
+
+        get_func = partial(self.get_data_func, instance)
+        # add args
+        if args:
+            get_func = partial(get_func, *args)
+
+        keys = self.get_keys(instance=instance, get_monitor_data_func=get_func)
+        return keys
+
+    def discovery(self, macro_name_list, *args):
+
+        if self.discovery_func:
+            discovery_func = self.discovery_func
+            if args:
+                discovery_func = partial(discovery_func, *args)
+        else:
+            discovery_func = partial(Monitor.get_ip_port, self.bin_name)
+        return Monitor.get_discovery_data(macro_name_list, discovery_func)
