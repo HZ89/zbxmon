@@ -5,7 +5,7 @@ import os
 from distutils.core import setup
 
 setup(
-    name='zabbix_service_monitor_script',
+    name='zbxmon',
     version='0.1',
     packages=['zsmc', 'zsmc/lib'],
     provides=['zsmc'],

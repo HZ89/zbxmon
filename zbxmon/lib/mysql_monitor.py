@@ -10,7 +10,7 @@ import MySQLdb
 import traceback
 from MySQLdb.cursors import Cursor, DictCursor
 
-from zsmc.monitor import Monitor
+from zbxmon.monitor import Monitor
 
 
 
