@@ -2,7 +2,7 @@
 #-*- coding: utf8 -*-
 
 __author__ = 'Harrison'
-from zsmc.monitor import Monitor
+from zbxmon.monitor import Monitor
 from argh import ArghParser, arg
 import argparse
 

@@ -10,7 +10,7 @@ import MySQLdb
 import traceback
 from MySQLdb.cursors import Cursor, DictCursor
 
-from zsmc.monitor import Monitor
+from zbxmon.monitor import Monitor
 
 
 
@@ -636,7 +636,7 @@ class MySQL_Monitor(object):
             status['Slave_running'] = status['Slave_running'] == 'ON' and 1 or 0
             status['Slave_SQL_Running'] = 0
             status['Slave_IO_Running'] = 0
-            status['slave_lag'] = -1
+            status['slave_lag'] = 0
             status['Relay_Log_Space'] = 0
             if status['Slave_running'] == 1:
                 res = cls._run_query("show slave status", conn, DictCursor)

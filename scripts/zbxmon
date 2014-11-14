@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-from zsmc.script import zsmc_main
+from zbxmon.script import zsmc_main
 
 if __name__ == '__main__':
     zsmc_main()
