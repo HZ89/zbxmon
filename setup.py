@@ -4,6 +4,7 @@
 import os
 from distutils.core import setup
 
+
 setup(
     name='zbxmon',
     version='0.1',
