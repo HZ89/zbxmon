@@ -10,7 +10,7 @@ setup(
     version='0.1',
     packages=['zbxmon', 'zbxmon/lib'],
     provides=['zbxmon'],
-    url='https://github.com/damagedcode/zabbix_service_monitor_script',
+    url='https://github.com/damagedcode/zbxmon',
     license='MIT',
     author='Harrison Zhu && Justin Ma',
     author_email='wcg6121@gmail.com',
