@@ -4,11 +4,12 @@
 import os
 from distutils.core import setup
 
+
 setup(
-    name='zabbix_service_monitor_script',
+    name='zbxmon',
     version='0.1',
-    packages=['zsmc', 'zsmc/lib'],
-    provides=['zsmc'],
+    packages=['zbxmon', 'zbxmon/lib'],
+    provides=['zbxmon'],
     url='https://github.com/damagedcode/zabbix_service_monitor_script',
     license='MIT',
     author='Harrison Zhu && Justin Ma',
@@ -16,7 +17,7 @@ setup(
     description='A script for zabbix agent monitor service, etc. mysql, mongodb, memcache..',
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r').read(),
     scripts=[
-        'scripts/zsmc',
+        'scripts/zbxmon',
     ]
 )
 

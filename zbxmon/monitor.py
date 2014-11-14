@@ -10,7 +10,7 @@ import psutil
 from netifaces import interfaces, ifaddresses, AF_INET
 from functools import partial
 from fcntl import LOCK_EX, LOCK_UN
-from zsmc.lib.auto_import_func import get_func_list
+from zbxmon.lib.auto_import_func import get_func_list
 from re import search
 
 
