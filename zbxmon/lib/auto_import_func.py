@@ -4,7 +4,7 @@ from importlib import import_module
 
 
 def get_func_list(service):
-    prefix =  ".".join(__name__.split('.')[:-1])
+    prefix = ".".join(__name__.split('.')[:-1])
     p = '{}.{}_monitor'.format(prefix, service)
     mod = import_module(p)
     try:
