@@ -62,8 +62,9 @@ def get_redis_data(instance_name, *args):
     d = r.info()
     check_items = {
         'redis_version': str,
-        'redis_mode': str,
+        'redis_mode': str,  # standalone,
         'uptime_in_seconds': int,
+        'process_id':int,
         # Clients
         'connected_clients': int,  # 当前客户端连接数
         'blocked_clients': int,  # 正在等待阻塞命令（BLPOP、BRPOP、BRPOPLPUSH）的客户端的数量
@@ -111,6 +112,8 @@ def get_redis_data(instance_name, *args):
         'used_cpu_user_children': float,
     }
     redis_stats = {k: d[k] if d.has_key(k) else v() for k, v in check_items.iteritems()}
+    redis_stats['role']=1 if redis_stats.get('role','master') == 'master' else 2
+    redis_stats['keyspace_hits_rate']='{0:.2f}'.format(float(redis_stats.get('keyspace_hits',0))/float(redis_stats.get('keyspace_hits',1)+redis_stats.get('keyspace_misses',0))*100)
     if redis_stats['connected_slaves'] > 0:
         slave_lists = set()
         for i in range(redis_stats['connected_slaves']):

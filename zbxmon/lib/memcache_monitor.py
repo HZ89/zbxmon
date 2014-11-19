@@ -79,9 +79,7 @@ def get_memcache_data(instance_name):
     for cmd in hits_ratio_cmds:
         hit_key = "%s_hits" % cmd
         miss_key = "%s_misses" % cmd
-        if result.has_key(hit_key) and result.has_key(miss_key) \
-                and result[hit_key] + result[miss_key] > 0:
-            result["%s_hists_ratio" % cmd] = int(result[hit_key] / (result[hit_key] + result[miss_key]) * 100)
-        else:
-            result["%s_hists_ratio" % cmd] = 0
+        result["%s_hists_ratio" % cmd]='{0:.2f}'.format(
+                        float(result.get(hit_key,0))/float(result.get(hit_key,1)+result.get(miss_key,0))*100.00
+        )
     return result
