@@ -113,7 +113,7 @@ def get_redis_data(instance_name, *args):
     }
     redis_stats = {k: d[k] if d.has_key(k) else v() for k, v in check_items.iteritems()}
     redis_stats['role']=1 if redis_stats.get('role','master') == 'master' else 2
-    redis_stats['keyspace_hits_rate']='{0:.2f}'.format(float(redis_stats.get('keyspace_hits',0))/float(redis_stats.get('keyspace_hits',1)+redis_stats.get('keyspace_misses',0))*100)
+    redis_stats['keyspace_hits_rate']='{0:.2f}'.format(float(redis_stats.get('keyspace_hits',0))/float(redis_stats.get('keyspace_hits',1)+redis_stats.get('keyspace_misses',0)+0.01)*100)
     if redis_stats['connected_slaves'] > 0:
         slave_lists = set()
         for i in range(redis_stats['connected_slaves']):
