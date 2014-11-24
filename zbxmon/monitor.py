@@ -214,7 +214,7 @@ class Monitor(object):
             try:
                 if proc.name() == proc_name:
                     listen = list(
-                        sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
+                        sorted([laddr.laddr for laddr in proc.get_connections('inet') if laddr.status == 'LISTEN'])[0])
                     if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
                         listen[0] = Monitor.get_local_ip()
                     result.append([str(listen[0]), str(listen[1])])
