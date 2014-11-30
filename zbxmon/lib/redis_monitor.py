@@ -6,6 +6,8 @@ import redis
 import re
 import psutil
 
+from zbxmon.monitor import Monitor
+
 BINNAME = 'redis-server'
 
 def discovery_redis():
@@ -26,10 +28,18 @@ def discovery_redis():
                                            if laddr.status == 'LISTEN'])[0]
         except:
             continue
+
         redis_passwd = ''
         config_files = []
-        if os.path.isdir(redis_process.getcwd()):
-            config_files.append(os.path.join(redis_process.getcwd() , redis_conf_file_name))
+
+        if os.path.isdir(redis_process.getcwd())  :
+            cwd_try=os.path.join(redis_process.getcwd() , redis_conf_file_name)
+            if os.path.exists(cwd_try):
+                config_files.append(cwd_try)
+            else:
+                for root_dir, dirs, files in os.walk(os.path.dirname(redis_process.getcwd())):
+                    if 'redis.conf' in files:
+                        config_files.append(os.path.join(root_dir, redis_conf_file_name))
         elif len(redis_process.cmdline()) > 1 and os.path.isfile(redis_process.cmdline()[1]):
             config_files.append(redis_process.cmdline()[1])
         else:
@@ -37,17 +47,22 @@ def discovery_redis():
                 if 'redis.conf' in files:
                     config_files.append(os.path.join(root_dir, redis_conf_file_name))
         for config_file in config_files:
-            with open(config_file, 'r') as f:
-                passwd = None
-                port = None
-                for line in f.readlines():
-                    if re.search('^requirepass', line):
-                        passwd = line.split()[1]
-                    if re.search('^port', line):
-                        port = line.split()[1]
-            if passwd and port and str(redis_port) == port:
-                redis_passwd = str(passwd)
-                break
+            try:
+                with open(config_file, 'r') as f:
+                    passwd = None
+                    port = None
+                    for line in f.readlines():
+                        if re.search('^requirepass', line):
+                            passwd = line.split()[1]
+                        if re.search('^port', line):
+                            port = line.split()[1]
+                if passwd and port and str(redis_port) == port:
+                    redis_passwd = Monitor.encode_password(passwd)
+                    break
+            except:
+                pass
+        if redis_ip=='0.0.0.0':
+            redis_ip=Monitor.get_local_ip()
         redises.append([redis_ip, redis_port, redis_passwd])
     return redises
 def get_redis_data(instance_name, *args):
@@ -58,6 +73,8 @@ def get_redis_data(instance_name, *args):
     """
 
     ip, port, passwd = instance_name.split('/')
+    passwd=Monitor.decode_password(passwd)
+
     r = redis.StrictRedis(host=ip, port=port, password=passwd)
     d = r.info()
     check_items = {

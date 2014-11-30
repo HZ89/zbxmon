@@ -241,7 +241,12 @@ class Monitor(object):
     #     else:
     #         instance_list = self._get_instance_list_from_cache()
     #     return instance_list
-
+    @classmethod
+    def decode_password(cls,passwd):
+        return str(passwd).replace('%2C',',').replace('%5C','/').replace('%26','&')
+    @classmethod
+    def encode_password(cls,passwd):
+        return str(passwd).replace(',','%2C').replace('/','%5C').replace('&','%26')
     @classmethod
     def get_discovery_data(cls, attribute_name_list, discovery_func=None, procname=None):
         """

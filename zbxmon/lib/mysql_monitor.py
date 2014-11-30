@@ -19,17 +19,41 @@ from zbxmon.monitor import Monitor
 BINNAME = 'mysqld'
 
 def discovery_mysql(*args):
+    '''
+    discovery mysql instance's host and port
+    mysql pre-4.1 versions are not suppose
+    '''
     import psutil
-    result = []
+    instance_list=[]
     for proc in [i for i in psutil.process_iter() if i.name() == BINNAME]:
         listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
         if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
             listen[0] = Monitor.get_local_ip()
-        sock_path = os.path.join(proc.cwd(), 'mysql.sock')
-        if MySQL_Monitor.mysql_ping(host=str(listen[0]), port=int(listen[1]), user=args[0], passwd=args[1]) == -1:
-            res = MySQL_Monitor.grant_monitor_user(socket=sock_path, user=args[0], host=str(listen[0]),
-                                                   passwd=args[1])
-        result.append([str(listen[0]), str(listen[1])])
+        sock_path = ''
+        if os.path.exists(os.path.join(proc.cwd(), 'mysql.sock')):
+            sock_path=os.path.join(proc.cwd(), 'mysql.sock')
+        else:
+            cmds=dict([str(i).split('=') for i in proc.cmdline() if str(i).find('=')!=-1])
+            if os.path.exists(cmds.get('--socket','')):
+                sock_path=cmds.get('--socket','')
+            elif os.path.exists(os.path.join(cmds.get('--datadir',''),cmds.get('--socket',''))):
+                sock_path=os.path.join(cmds.get('--datadir',''),cmds.get('--socket',''))
+            elif os.path.exists(cmds.get('--datadir','')):
+                for root_dir, dirs, files in os.walk(cmds.get('--datadir','')):
+                    if 'mysql.sock' in files:
+                        sock_path=os.path.join(root_dir, 'mysql.sock')
+                        break
+        if sock_path and len(sock_path)>0:
+            instance_list.append((str(listen[0]), str(listen[1]),sock_path))
+    instance_list=list(set(instance_list))
+    result=[]
+    for host,port,socket in instance_list:
+        if MySQL_Monitor.mysql_version(socket=socket)>['4','9']:
+            result.append([host,port])
+            if MySQL_Monitor.mysql_ping(host=str(host), port=int(port), user=args[0], passwd=args[1]) == -1:
+                res = MySQL_Monitor.grant_monitor_user(socket=str(socket), user=args[0], host=str(host),
+                                                       passwd=args[1])
+
     return result
 
 
@@ -257,7 +281,7 @@ class MySQL_Monitor(object):
                     status['ibuf_merged'] = int(row[0]) + int(row[1]) + int(row[2])
                 elif line.find(' merged recs, ') != -1:
                     # 19817685 inserts, 19817684 merged recs, 3552620 merges
-                    row = [int(i) for i in re.findall('(d+) inserts,\s+(\d+) merged recs,\s+(\d+) merges', line)[0]]
+                    row = [int(i) for i in re.findall('(\d+) inserts,\s+(\d+) merged recs,\s+(\d+) merges', line)[0]]
                     status['ibuf_inserts'] = row[0]
                     status['ibuf_merged'] = row[1]
                     status['ibuf_merges'] = row[2]
@@ -301,7 +325,7 @@ class MySQL_Monitor(object):
                     row = [i for i in re.findall('Last checkpoint at\s+(\w+)(?: \w+)?', line)[0] if len(i) > 0]
                     status['last_checkpoint'] = int(row[0]) if len(row) == 1 else int(row[0] + row[1], 16)
                 # BUFFER POOL AND MEMORY
-                elif line.startswith('Total memory allocated'):
+                elif line.startswith('Total memory allocated') and not line.startswith('Total memory allocated by'):
                     #Total memory allocated 2146304000; in additional pool allocated 0
                     row = [int(i) for i in
                            re.findall('Total memory allocated\s+(\d+)(?:; in additional pool allocated\s+(\d+))?',
@@ -435,6 +459,27 @@ class MySQL_Monitor(object):
         return target
 
     @classmethod
+    def mysql_version(cls,socket):
+        conn = None
+        cur = None
+        version=[0,0]
+        try:
+            conn = MySQLdb.connect(unix_socket=socket)
+            cur = conn.cursor()
+            # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
+            count = cur.execute("show variables like 'version'")
+            if count>0:
+                version=str(dict(cur.fetchall()).get('version','0.0.0')).split('.')[0:2]
+        except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError,MySQLdb.OperationalError) as e:
+            pass
+        except Exception as e:
+            #print e
+            pass
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+        return version
+    @classmethod
     def mysql_ping(cls, host, port, user, passwd):
         result = 0
         conn = None
@@ -442,7 +487,7 @@ class MySQL_Monitor(object):
             conn = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd)
             conn.ping()
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError, Exception) as e:
-            # print e.message
+            #print "%s:%s > %s" % (host,port,e)
             # operationerror: not allowed to connect
             result = -1
         finally:
@@ -459,7 +504,7 @@ class MySQL_Monitor(object):
             cur = conn.cursor()
             # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
             count = cur.execute(
-                "GRANT SUPER,PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' WITH MAX_USER_CONNECTIONS 5;flush privileges" % (
+                "/*!50001 set old_passwords=off*/; GRANT SUPER,PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' /*!50001 WITH MAX_USER_CONNECTIONS 5 */" % (
                     user, host, passwd))
             result = 1
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError) as e:
@@ -647,10 +692,12 @@ class MySQL_Monitor(object):
                     slave_status['Slave_IO_Running']= str(slave_status.get('Slave_IO_Running','NO')).lower()=='yes' and 1 or 0
                     slave_status['slave_lag'] = str(slave_status.get('Seconds_Behind_Master', 0)).lower()=='null' and 0 or slave_status.get('Seconds_Behind_Master', 0)
                     status.update(cls._change_dict_value_to_int(slave_status))
-
-            res = cls._run_query("SHOW MASTER LOGS", conn)
-            if res and len(res) > 0:
-                status['binary_log_space'] = sum([int(i[1]) for i in res])
+            if str(status.get('log_bin','OFF')).lower()=='on':
+                res = cls._run_query("SHOW MASTER LOGS", conn)
+                if res and len(res) > 0:
+                    status['binary_log_space'] = sum([int(i[1]) for i in res])
+            else:
+                status['binary_log_space'] =0
             res = cls._run_query("SHOW PROCESSLIST", conn, DictCursor)
             if res and len(res) > 0:
                 cls._change_dict_value_to_int(res)
@@ -693,6 +740,9 @@ class MySQL_Monitor(object):
                         if status.has_key(key):
                             innodb_status[overrides[key][0]] = status[key] * overrides[key][1]
                     status.update(innodb_status)
+            else:
+                status['history_list']=0
+
             # Get response time histogram from Percona Server or MariaDB if enabled.
             if (status.has_key('have_response_time_distribution') and status[
                 'have_response_time_distribution'] == 'YES') \
