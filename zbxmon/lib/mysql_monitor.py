@@ -696,7 +696,7 @@ class MySQL_Monitor(object):
                         status['Slave_running']=1
                 slave_status['Slave_SQL_Running']= str(slave_status.get('Slave_SQL_Running','NO')).lower()=='yes' and 1 or 0
                 slave_status['Slave_IO_Running']= str(slave_status.get('Slave_IO_Running','NO')).lower()=='yes' and 1 or 0
-                slave_status['slave_lag'] = str(slave_status.get('Seconds_Behind_Master', 0)).lower()=='null' and 0 or slave_status.get('Seconds_Behind_Master', 0)
+                slave_status['slave_lag'] = int(str(slave_status.get('Seconds_Behind_Master', 0)).lower() in ('null','none') and "0" or slave_status.get('Seconds_Behind_Master', 0))
                 status.update(cls._change_dict_value_to_int(slave_status))
             if str(status.get('log_bin','OFF')).lower()=='on':
                 res = cls._run_query("SHOW MASTER LOGS", conn)
