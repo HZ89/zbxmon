@@ -82,4 +82,6 @@ def get_memcache_data(instance_name):
         result["%s_hists_ratio" % cmd]='{0:.2f}'.format(
                         float(result.get(hit_key,0))/float(result.get(hit_key,1)+result.get(miss_key,0)+0.1)*100.00
         )
+    result['rate_memory_usage']='{0:.2f}'.format(float(result.get('bytes'))/float(result.get('limit_maxbytes',1))*100.00)
+
     return result

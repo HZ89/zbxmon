@@ -503,9 +503,11 @@ class MySQL_Monitor(object):
             conn = MySQLdb.connect(unix_socket=socket)
             cur = conn.cursor()
             # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
+            count = cur.execute("flush hosts")
             count = cur.execute(
                 "/*!50001 set old_passwords=off*/; GRANT SUPER,PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' /*!50001 WITH MAX_USER_CONNECTIONS 5 */" % (
                     user, host, passwd))
+            count = cur.execute("flush privileges")
             result = 1
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError) as e:
             print e
@@ -683,15 +685,19 @@ class MySQL_Monitor(object):
             status['Slave_IO_Running'] = 0
             status['slave_lag'] = 0
             status['Relay_Log_Space'] = 0
-            if status['Slave_running'] == 1:
-                res = cls._run_query("show slave status", conn, DictCursor)
-                if res and len(res) > 0:
-                    # Must lowercase keys because different MySQL versions have different lettercase.
-                    slave_status = {key: val for key, val in res[0].iteritems()}
-                    slave_status['Slave_SQL_Running']= str(slave_status.get('Slave_SQL_Running','NO')).lower()=='yes' and 1 or 0
-                    slave_status['Slave_IO_Running']= str(slave_status.get('Slave_IO_Running','NO')).lower()=='yes' and 1 or 0
-                    slave_status['slave_lag'] = str(slave_status.get('Seconds_Behind_Master', 0)).lower()=='null' and 0 or slave_status.get('Seconds_Behind_Master', 0)
-                    status.update(cls._change_dict_value_to_int(slave_status))
+
+            res = cls._run_query("show slave status", conn, DictCursor)
+            if res and len(res) > 0:
+                # Must lowercase keys because different MySQL versions have different lettercase.
+                slave_status = {key: val for key, val in res[0].iteritems()}
+                if slave_status.has_key('Slave_SQL_Running') or slave_status.has_key('Slave_IO_Running') or slave_status.has_key('Seconds_Behind_Master'):
+                    master_host=str(slave_status.get('Master_Host','').strip().lower())
+                    if len(master_host)>0 and master_host not in ('_'):
+                        status['Slave_running']=1
+                slave_status['Slave_SQL_Running']= str(slave_status.get('Slave_SQL_Running','NO')).lower()=='yes' and 1 or 0
+                slave_status['Slave_IO_Running']= str(slave_status.get('Slave_IO_Running','NO')).lower()=='yes' and 1 or 0
+                slave_status['slave_lag'] = str(slave_status.get('Seconds_Behind_Master', 0)).lower()=='null' and 0 or slave_status.get('Seconds_Behind_Master', 0)
+                status.update(cls._change_dict_value_to_int(slave_status))
             if str(status.get('log_bin','OFF')).lower()=='on':
                 res = cls._run_query("SHOW MASTER LOGS", conn)
                 if res and len(res) > 0:
