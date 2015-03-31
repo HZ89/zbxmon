@@ -214,7 +214,7 @@ class Monitor(object):
             try:
                 if proc.name() == proc_name:
                     listen = list(
-                        sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
+                        sorted([laddr.laddr for laddr in proc.get_connections('inet') if laddr.status == 'LISTEN'])[0])
                     if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
                         listen[0] = Monitor.get_local_ip()
                     result.append([str(listen[0]), str(listen[1])])
@@ -241,7 +241,12 @@ class Monitor(object):
     #     else:
     #         instance_list = self._get_instance_list_from_cache()
     #     return instance_list
-
+    @classmethod
+    def decode_password(cls,passwd):
+        return str(passwd).replace('%2C',',').replace('%5C','/').replace('%26','&')
+    @classmethod
+    def encode_password(cls,passwd):
+        return str(passwd).replace(',','%2C').replace('/','%5C').replace('&','%26')
     @classmethod
     def get_discovery_data(cls, attribute_name_list, discovery_func=None, procname=None):
         """

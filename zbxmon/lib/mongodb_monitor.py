@@ -105,7 +105,7 @@ def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
     if rs_status:
         rs_members=[i['optime'] for i in rs_status['members'] if i['name']==instance_name or i['stateStr']=='PRIMARY']
         if len(rs_members) == 2:
-            mongo_status['replset_delay']=abs(rs_members[0]-rs_members[1])
+            mongo_status['replset_delay']=abs(rs_members[0].time-rs_members[1].time)
 
     for key in mongo_status.keys():
         mongo_status[key.lower()] = mongo_status.pop(key)

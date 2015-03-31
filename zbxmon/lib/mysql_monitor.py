@@ -19,17 +19,41 @@ from zbxmon.monitor import Monitor
 BINNAME = 'mysqld'
 
 def discovery_mysql(*args):
+    '''
+    discovery mysql instance's host and port
+    mysql pre-4.1 versions are not suppose
+    '''
     import psutil
-    result = []
+    instance_list=[]
     for proc in [i for i in psutil.process_iter() if i.name() == BINNAME]:
         listen = list(sorted([laddr.laddr for laddr in proc.get_connections() if laddr.status == 'LISTEN'])[0])
         if listen[0] == '0.0.0.0' or listen[0] == '::' or listen[0] == '127.0.0.1' or listen[0] == '':
             listen[0] = Monitor.get_local_ip()
-        sock_path = os.path.join(proc.cwd(), 'mysql.sock')
-        if MySQL_Monitor.mysql_ping(host=str(listen[0]), port=int(listen[1]), user=args[0], passwd=args[1]) == -1:
-            res = MySQL_Monitor.grant_monitor_user(socket=sock_path, user=args[0], host=str(listen[0]),
-                                                   passwd=args[1])
-        result.append([str(listen[0]), str(listen[1])])
+        sock_path = ''
+        if os.path.exists(os.path.join(proc.cwd(), 'mysql.sock')):
+            sock_path=os.path.join(proc.cwd(), 'mysql.sock')
+        else:
+            cmds=dict([str(i).split('=') for i in proc.cmdline() if str(i).find('=')!=-1])
+            if os.path.exists(cmds.get('--socket','')):
+                sock_path=cmds.get('--socket','')
+            elif os.path.exists(os.path.join(cmds.get('--datadir',''),cmds.get('--socket',''))):
+                sock_path=os.path.join(cmds.get('--datadir',''),cmds.get('--socket',''))
+            elif os.path.exists(cmds.get('--datadir','')):
+                for root_dir, dirs, files in os.walk(cmds.get('--datadir','')):
+                    if 'mysql.sock' in files:
+                        sock_path=os.path.join(root_dir, 'mysql.sock')
+                        break
+        if sock_path and len(sock_path)>0:
+            instance_list.append((str(listen[0]), str(listen[1]),sock_path))
+    instance_list=list(set(instance_list))
+    result=[]
+    for host,port,socket in instance_list:
+        if MySQL_Monitor.mysql_version(socket=socket)>['4','9']:
+            result.append([host,port])
+            if MySQL_Monitor.mysql_ping(host=str(host), port=int(port), user=args[0], passwd=args[1]) == -1:
+                res = MySQL_Monitor.grant_monitor_user(socket=str(socket), user=args[0], host=str(host),
+                                                       passwd=args[1])
+
     return result
 
 
@@ -257,7 +281,7 @@ class MySQL_Monitor(object):
                     status['ibuf_merged'] = int(row[0]) + int(row[1]) + int(row[2])
                 elif line.find(' merged recs, ') != -1:
                     # 19817685 inserts, 19817684 merged recs, 3552620 merges
-                    row = [int(i) for i in re.findall('(d+) inserts,\s+(\d+) merged recs,\s+(\d+) merges', line)[0]]
+                    row = [int(i) for i in re.findall('(\d+) inserts,\s+(\d+) merged recs,\s+(\d+) merges', line)[0]]
                     status['ibuf_inserts'] = row[0]
                     status['ibuf_merged'] = row[1]
                     status['ibuf_merges'] = row[2]
@@ -301,7 +325,7 @@ class MySQL_Monitor(object):
                     row = [i for i in re.findall('Last checkpoint at\s+(\w+)(?: \w+)?', line)[0] if len(i) > 0]
                     status['last_checkpoint'] = int(row[0]) if len(row) == 1 else int(row[0] + row[1], 16)
                 # BUFFER POOL AND MEMORY
-                elif line.startswith('Total memory allocated'):
+                elif line.startswith('Total memory allocated') and not line.startswith('Total memory allocated by'):
                     #Total memory allocated 2146304000; in additional pool allocated 0
                     row = [int(i) for i in
                            re.findall('Total memory allocated\s+(\d+)(?:; in additional pool allocated\s+(\d+))?',
@@ -435,6 +459,27 @@ class MySQL_Monitor(object):
         return target
 
     @classmethod
+    def mysql_version(cls,socket):
+        conn = None
+        cur = None
+        version=[0,0]
+        try:
+            conn = MySQLdb.connect(unix_socket=socket)
+            cur = conn.cursor()
+            # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
+            count = cur.execute("show variables like 'version'")
+            if count>0:
+                version=str(dict(cur.fetchall()).get('version','0.0.0')).split('.')[0:2]
+        except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError,MySQLdb.OperationalError) as e:
+            pass
+        except Exception as e:
+            #print e
+            pass
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+        return version
+    @classmethod
     def mysql_ping(cls, host, port, user, passwd):
         result = 0
         conn = None
@@ -442,7 +487,7 @@ class MySQL_Monitor(object):
             conn = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd)
             conn.ping()
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError, Exception) as e:
-            # print e.message
+            #print "%s:%s > %s" % (host,port,e)
             # operationerror: not allowed to connect
             result = -1
         finally:
@@ -458,9 +503,11 @@ class MySQL_Monitor(object):
             conn = MySQLdb.connect(unix_socket=socket)
             cur = conn.cursor()
             # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
+            count = cur.execute("flush hosts")
             count = cur.execute(
-                "GRANT SUPER,PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' WITH MAX_USER_CONNECTIONS 5;flush privileges" % (
+                "/*!50001 set old_passwords=off*/; GRANT SUPER,PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' /*!50001 WITH MAX_USER_CONNECTIONS 5 */" % (
                     user, host, passwd))
+            count = cur.execute("flush privileges")
             result = 1
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError) as e:
             print e
@@ -546,53 +593,53 @@ class MySQL_Monitor(object):
             # TODO: 脏页数据
             # thread cache hit rate
             status['thread_cache_hit_rate'] = '{0:.2f}'.format(
-                (1 - float(status.get('Threads_created', 0)) / status.get('Connections', 0)) * 100.0)
+                (1 - float(status.get('Threads_created', 0)) / (status.get('Connections', 0)+0.001)) * 100.0)
             # WARNING : < 95% CRITICAL : < 90%
             status['thread_connected_rate'] = '{0:.2f}'.format(
-                float(status.get('Threads_connected', 0)) / status.get('max_connections', 1) * 100.0)
+                float(status.get('Threads_connected', 0)) / (0.001+status.get('max_connections', 1)) * 100.0)
             # key buffer miss rate
             # 0.1%以下都很好(每1000个请求有一个直接读硬盘)
             # 在0.01%以下的话，key_buffer_size分配的过多，可以适当减少
             status['key_buffer_hit_rate'] = '{0:.2f}'.format(
-                (1 - float(status.get('Key_reads', 0)) / status.get('Key_read_requests', 1)) * 100.0)
+                (1 - float(status.get('Key_reads', 0)) / (0.001+status.get('Key_read_requests', 1)) ) * 100.0)
             # key block used ratio Key_blocks_used
             # Key_blocks_unused表示未使用的缓存簇(blocks)数，Key_blocks_used表示曾经用到的最大的blocks数，
             # 比如这台服务器，所有的缓存都用到了，要么增加key_buffer_size，要么就是过渡索引了，把缓存占满了
             # 比较理想的设置: ≈ 80%
             status['key_block_used_rate'] = '{0:.2f}'.format(float(status.get('Key_blocks_used', 0)) / (
-            status.get('Key_blocks_used', 0) + status.get('Key_blocks_unused', 1)) * 100)
+            status.get('Key_blocks_used', 0) + status.get('Key_blocks_unused', 1)+0.001) * 100)
             # 磁盘上创建临时表的比例
             # 每次创建临时表，Created_tmp_tables增加，如果是在磁盘上创建临时表
             # Created_tmp_disk_tables也增加,Created_tmp_files表示MySQL服务创建的临时文件文件数
             # 比较理想的配置是 <= 25%
             status['created_tmp_disk_table_rate'] = '{0:.2f}'.format(
-                float(status.get('Created_tmp_disk_tables', 0)) / status.get('Created_tmp_tables', 1) * 100.0)
+                float(status.get('Created_tmp_disk_tables', 0)) / (0.001+status.get('Created_tmp_tables', 1)) * 100.0)
             # 表缓存命中率
             # Open_tables表示打开表的数量，Opened_tables表示打开过的表数量，如果Opened_tables数量过大，
             # 说明配置中table_cache(5.1.3之后这个值叫做table_open_cache)值可能太小，我们查询一下服务器table_cache值
             # 比较合适: >= 85%
             status['open_table_hit_rate'] = '{0:.2f}'.format(
-                float(status.get('Open_tables', 0)) / status.get('Opened_tables', 1) * 100.0)
+                float(status.get('Open_tables', 0)) / (0.001+status.get('Opened_tables', 1)) * 100.0)
             # 表缓存使用率
             # 首先判断使用率，如果使用率<95%则表示状态正常；假如使用率>=95%则开始判断命中率，命中率阀值判断如下：
             status['open_table_usage_rate'] = '{0:.2f}'.format(
-                float(status.get('Open_tables', 0)) / status.get('table_open_cache', 1) * 100.0)
+                float(status.get('Open_tables', 0)) / (0.001+status.get('table_open_cache', 1)) * 100.0)
             if str(status.get('query_cache_type','OFF')).lower()=='on':
                 # query cache fragment ratio
                 # 如果查询缓存碎片率超过20%，可以用FLUSH QUERY CACHE整理缓存碎片
                 status['qcache_fragment_rate'] = '{0:.2f}'.format(
-                    float(status.get('Qcache_free_blocks', 0)) / status.get('Qcache_total_blocks', 1) * 100.0)
+                    float(status.get('Qcache_free_blocks', 0)) /(0.001 + status.get('Qcache_total_blocks', 1)) * 100.0)
 
                 # query cache usage ratio
                 # 查询缓存利用率在25%以下的话说明query_cache_size设置的过大，可适当减小;
                 # 查询缓存利用率在80%以上而且Qcache_lowmem_prunes > 50的话说明query_cache_size可能有点小，要不就是碎片太多
                 status['qcache_usage_rate'] = '{0:.2f}'.format(
-                    float(status.get('query_cache_size', 0) - status.get('Qcache_free_memory', 0)) / status.get(
-                        'query_cache_size', 1) * 100)
+                    float(status.get('query_cache_size', 0) - status.get('Qcache_free_memory', 0)) / (0.001+status.get(
+                        'query_cache_size', 1)) * 100)
 
                 # select query cache hits rate
                 # mysql administrator: ([Qcache_hits]/([Qcache_hits]+[QCache_inserts]+[QCache_not_cached]))*100
-                status['qcache_hit_rate'] = '{0:.2f}'.format(float(status.get('Qcache_hits', 0)) / (
+                status['qcache_hit_rate'] = '{0:.2f}'.format(float(status.get('Qcache_hits', 0)) / (0.001+
                 status.get('Qcache_hits', 1) + status.get('Qcache_inserts', 0)) * 100.0)
             else:
                 status['qcache_fragment_rate']='0.0'
@@ -603,13 +650,13 @@ class MySQL_Monitor(object):
             # WARNING : < 95% CRITICAL : < 85%
             # 命中率太低说明innodb_buffer_pool_size设置太低，innodb_buffer_pool_size里面缓存了InnoDB引擎表的索引和数据，内存不足时查询只能从硬盘读取索引与数据，查询效率下降
             status['innodb_buffer_pool_hit_rate'] = '{0:.2f}'.format((1 - float(
-                status.get('Innodb_buffer_pool_reads', 0)) / status.get('Innodb_buffer_pool_read_requests', 1)) * 100.0)
+                status.get('Innodb_buffer_pool_reads', 0)) / (0.001+status.get('Innodb_buffer_pool_read_requests', 1))) * 100.0)
             # 表扫描使用索引比例
             # 当发生故障告警时表示超过一半的查询请求不使用索引或者索引使用不正确。
             status['index_usage_rate'] = '{0:.2f}'.format((1 - (
                                                     float(status.get('Handler_read_rnd', 0)
-                                                    + status.get('Handler_read_rnd_next', 0))) / (
-                                                           status.get('Handler_read_first', 1)
+                                                    + status.get('Handler_read_rnd_next', 0))) / (0.001
+                                                           +status.get('Handler_read_first', 1)
                                                            + status.get('Handler_read_key', 1)
                                                            + status.get('Handler_read_next', 1)
                                                            + status.get('Handler_read_prev', 1)
@@ -619,13 +666,13 @@ class MySQL_Monitor(object):
             # WARNING : > 10% CRITICAL : > 30%
             # 当发生告警说明表锁造成的阻塞比较严重，需要注意是否使用事务引擎吗，或者是注意是否发存在表扫描更新的情况
             status['table_lock_wait_rate'] = '{0:.2f}'.format(
-                float(status.get('Table_locks_waited', 0)) / status.get('Table_locks_immediate', 1) * 100.0)
+                float(status.get('Table_locks_waited', 0)) /( status.get('Table_locks_immediate', 1) +0.001)* 100.0)
 
             # binlog日志缓存写在磁盘上的比例
             # WARNING : > 5% CRITICAL : > 10%
             # binlog_cache_size太小或者binlog生成太快，binlog缓存不够只能写在硬盘上。
             status['binlog_cache_disk_rate'] = '{0:.2f}'.format(
-                float(status.get('Binlog_cache_disk_use', 0)) / status.get('Binlog_cache_use', 1) * 100.0)
+                float(status.get('Binlog_cache_disk_use', 0)) / (0.001+status.get('Binlog_cache_use', 1)) * 100.0)
 
             # slave-running
             # slave-lag
@@ -638,19 +685,25 @@ class MySQL_Monitor(object):
             status['Slave_IO_Running'] = 0
             status['slave_lag'] = 0
             status['Relay_Log_Space'] = 0
-            if status['Slave_running'] == 1:
-                res = cls._run_query("show slave status", conn, DictCursor)
-                if res and len(res) > 0:
-                    # Must lowercase keys because different MySQL versions have different lettercase.
-                    slave_status = {key: val for key, val in res[0].iteritems()}
-                    slave_status['Slave_SQL_Running']= str(slave_status.get('Slave_SQL_Running','NO')).lower()=='yes' and 1 or 0
-                    slave_status['Slave_IO_Running']= str(slave_status.get('Slave_IO_Running','NO')).lower()=='yes' and 1 or 0
-                    slave_status['slave_lag'] = str(slave_status.get('Seconds_Behind_Master', 0)).lower()=='null' and 0 or slave_status.get('Seconds_Behind_Master', 0)
-                    status.update(cls._change_dict_value_to_int(slave_status))
 
-            res = cls._run_query("SHOW MASTER LOGS", conn)
+            res = cls._run_query("show slave status", conn, DictCursor)
             if res and len(res) > 0:
-                status['binary_log_space'] = sum([int(i[1]) for i in res])
+                # Must lowercase keys because different MySQL versions have different lettercase.
+                slave_status = {key: val for key, val in res[0].iteritems()}
+                if slave_status.has_key('Slave_SQL_Running') or slave_status.has_key('Slave_IO_Running') or slave_status.has_key('Seconds_Behind_Master'):
+                    master_host=str(slave_status.get('Master_Host','').strip().lower())
+                    if len(master_host)>0 and master_host not in ('_'):
+                        status['Slave_running']=1
+                slave_status['Slave_SQL_Running']= str(slave_status.get('Slave_SQL_Running','NO')).lower()=='yes' and 1 or 0
+                slave_status['Slave_IO_Running']= str(slave_status.get('Slave_IO_Running','NO')).lower()=='yes' and 1 or 0
+                slave_status['slave_lag'] = int(str(slave_status.get('Seconds_Behind_Master', 0)).lower() in ('null','none') and "0" or slave_status.get('Seconds_Behind_Master', 0))
+                status.update(cls._change_dict_value_to_int(slave_status))
+            if str(status.get('log_bin','OFF')).lower()=='on':
+                res = cls._run_query("SHOW MASTER LOGS", conn)
+                if res and len(res) > 0:
+                    status['binary_log_space'] = sum([int(i[1]) for i in res])
+            else:
+                status['binary_log_space'] =0
             res = cls._run_query("SHOW PROCESSLIST", conn, DictCursor)
             if res and len(res) > 0:
                 cls._change_dict_value_to_int(res)
@@ -693,6 +746,9 @@ class MySQL_Monitor(object):
                         if status.has_key(key):
                             innodb_status[overrides[key][0]] = status[key] * overrides[key][1]
                     status.update(innodb_status)
+            else:
+                status['history_list']=0
+
             # Get response time histogram from Percona Server or MariaDB if enabled.
             if (status.has_key('have_response_time_distribution') and status[
                 'have_response_time_distribution'] == 'YES') \
