@@ -24,7 +24,7 @@ def discovery_redis():
                           if len(x.cmdline()) > 0 and os.path.basename(x.exe()) == BINNAME]:
         try:
             redis_ip, redis_port = sorted([laddr.laddr
-                                           for laddr in redis_process.get_connections()
+                                           for laddr in redis_process.connections()
                                            if laddr.status == 'LISTEN'])[0]
         except:
             continue
