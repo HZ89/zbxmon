@@ -3,37 +3,13 @@
 
 __author__ = 'Harrison'
 from zbxmon.monitor import Monitor
-from argh import ArghParser, arg
+from argh import ArghParser, arg, expects_obj
 import argparse
 
 # TODO:Completion script comments
 
 # UserParameter=service.status[*],/opt/17173_install/zabbix-2.4.1/externalscripts/monitor --service=$1 --item=$2 --instance=$3 --extend=$4
 # UserParameter=service.discovery[*],/opt/17173_install/zabbix-2.4.1/externalscripts/monitor  --service=$1 --discovery --macros=$2 --extend=$3
-
-
-    # @classmethod
-    # def discovery_phpfpm(cls, *args):
-    # """
-    # find local php-fpm process from config files
-    # @param args: first value is config dir root, second value is regular used for find php-fpm config file
-    # @return:
-    #     """
-    #     import ConfigParser
-    #     config_path = args[0]
-    #     prog = re.compile(args[1])
-    #     fpm_conf = []
-    #     if os.path.isdir(config_path):
-    #         for root_dir, dirs, files in os.walk(config_path):
-    #             for file in files:
-    #                 if prog.match(file):
-    #                     config = ConfigParser.RawConfigParser()
-    #                     config.read(file)
-    #                     for section in config.sections():
-    #                         if section == 'global':
-    #                             continue
-    #                         pool = {}
-    #                         for item, value in config.items(section):
 
 @arg('--discovery', '-D', default=False, required=False, help='Discovery the service instance and return json data')
 @arg('--service', '-S', required=True, help='the service name of monitor')
@@ -43,6 +19,7 @@ import argparse
 @arg('--extend', '-E', help='extend args eg. p,p1,p2')
 @arg('--cache', '-C', help='cache path')
 @arg('--list', '-L', default=False, help='list monitor items for this instance')
+@expects_obj
 def start(args):
     """
     get service monitor data, or discovery service instance
