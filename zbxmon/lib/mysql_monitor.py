@@ -23,6 +23,8 @@ def discovery_mysql(*args):
     discovery mysql instance's host and port
     mysql pre-4.1 versions are not suppose
     '''
+    assert not args is None and len(args) == 2 and args[0] != 'root', 'must give me a none root mysql user and ' \
+                                                                      'password!'
     import psutil
     instance_list=[]
     for proc in [i for i in psutil.process_iter() if i.name() == BINNAME]:
@@ -48,12 +50,15 @@ def discovery_mysql(*args):
     instance_list=list(set(instance_list))
     result=[]
     for host,port,socket in instance_list:
-        if MySQL_Monitor.mysql_version(socket=socket)>['4','9']:
-            result.append([host,port])
-            if MySQL_Monitor.mysql_ping(host=str(host), port=int(port), user=args[0], passwd=args[1]) == -1:
-                res = MySQL_Monitor.grant_monitor_user(socket=str(socket), user=args[0], host=str(host),
+        if MySQL_Monitor.mysql_ping(host=str(host), port=int(port), user=args[0], passwd=args[1]) == -1:
+           res, msg = MySQL_Monitor.grant_monitor_user(socket=str(socket), user=args[0], host=str(host),
                                                        passwd=args[1])
+           if res != 1:
+               raise Exception('Maybe'+ args[0] + 'have no permission ping mysql or root can not log in localhost ' \
+                                                'without password: \n' + str(msg))
 
+        if MySQL_Monitor.mysql_version(socket=socket, user=args[0], passwd=args[1])>[4, 9]:
+            result.append([host,port])
     return result
 
 
@@ -459,12 +464,12 @@ class MySQL_Monitor(object):
         return target
 
     @classmethod
-    def mysql_version(cls,socket):
+    def mysql_version(cls,socket, user, passwd):
         conn = None
         cur = None
         version=[0,0]
         try:
-            conn = MySQLdb.connect(unix_socket=socket)
+            conn = MySQLdb.connect(unix_socket=socket, user=user, passwd=passwd)
             cur = conn.cursor()
             # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
             count = cur.execute("show variables like 'version'")
@@ -478,7 +483,7 @@ class MySQL_Monitor(object):
         finally:
             if cur: cur.close()
             if conn: conn.close()
-        return version
+        return map((lambda x: int(x)), version)
     @classmethod
     def mysql_ping(cls, host, port, user, passwd):
         result = 0
@@ -497,6 +502,7 @@ class MySQL_Monitor(object):
     @classmethod
     def grant_monitor_user(self, socket, user, host, passwd):
         result = 0
+        message = None
         conn = None
         cur = None
         try:
@@ -510,15 +516,15 @@ class MySQL_Monitor(object):
             count = cur.execute("flush privileges")
             result = 1
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError) as e:
-            print e
+            message = e
             result = -1
         except MySQLdb.OperationalError as e:
             result = -2
-            print e
+            message = e
         finally:
             if cur: cur.close()
             if conn: conn.close()
-        return result
+        return result, message
 
     @classmethod
     def get_monitor_data(cls, host=None, port=None, user=None, passwd=None, socket=None):
