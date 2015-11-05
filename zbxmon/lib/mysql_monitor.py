@@ -54,10 +54,10 @@ def discovery_mysql(*args):
            res, msg = MySQL_Monitor.grant_monitor_user(socket=str(socket), user=args[0], host=str(host),
                                                        passwd=args[1])
            if res != 1:
-               raise Exception('Maybe'+ args[0] + 'have no permission ping mysql or root can not log in localhost ' \
+               raise Exception('Maybe'+ args[0] + 'have no permission ping mysql or root can n`ot log in localhost ' \
                                                 'without password: \n' + str(msg))
 
-        if MySQL_Monitor.mysql_version(socket=socket, user=args[0], passwd=args[1])>[4, 9]:
+        if MySQL_Monitor.mysql_version(host=str(host), port=int(port), user=args[0], passwd=args[1])>[4, 9]:
             result.append([host,port])
     return result
 
@@ -464,12 +464,12 @@ class MySQL_Monitor(object):
         return target
 
     @classmethod
-    def mysql_version(cls,socket, user, passwd):
+    def mysql_version(cls,host, port, user, passwd):
         conn = None
         cur = None
         version=[0,0]
         try:
-            conn = MySQLdb.connect(unix_socket=socket, user=user, passwd=passwd)
+            conn = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd)
             cur = conn.cursor()
             # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
             count = cur.execute("show variables like 'version'")
