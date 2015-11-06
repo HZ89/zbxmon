@@ -32,12 +32,12 @@ def discovery_redis():
         redis_passwd = ''
         config_files = []
 
-        if os.path.isdir(redis_process.getcwd())  :
-            cwd_try=os.path.join(redis_process.getcwd() , redis_conf_file_name)
+        if os.path.isdir(redis_process.cwd())  :
+            cwd_try=os.path.join(redis_process.cwd() , redis_conf_file_name)
             if os.path.exists(cwd_try):
                 config_files.append(cwd_try)
             else:
-                for root_dir, dirs, files in os.walk(os.path.dirname(redis_process.getcwd())):
+                for root_dir, dirs, files in os.walk(os.path.dirname(redis_process.cwd())):
                     if 'redis.conf' in files:
                         config_files.append(os.path.join(root_dir, redis_conf_file_name))
         elif len(redis_process.cmdline()) > 1 and os.path.isfile(redis_process.cmdline()[1]):
