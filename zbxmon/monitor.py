@@ -18,7 +18,7 @@ class Monitor(object):
     def __init__(self, service, instance=None, cache_path=None):
 
         """
-        @param app: type of str, name of your monitor app
+        @param service: type of str, name of your monitor app
         @return: object of Monitor
         """
         self.service = service
@@ -122,7 +122,7 @@ class Monitor(object):
                 self._make_cache(monitor_data)
 
             else:
-                #update key version
+                # update key version
                 self._update_version(instance, item)
         else:
             monitor_data = {}
@@ -150,10 +150,9 @@ class Monitor(object):
             #                for instance_name in instance_list:
             monitor_data[instance] = get_monitor_data_func()
             self._make_cache(monitor_data)
-        #    return monitor_data[instance][item]
+        # return monitor_data[instance][item]
 
         return {} if not self._data.has_key(instance) else self._data[instance]
-
 
     def _update_version(self, instance, item, item_list=None):
 
@@ -174,6 +173,7 @@ class Monitor(object):
     def _make_cache(self, data):
         """
         create and update cache file
+        :rtype : object
         @param data: the data you want put in cache file, must be a dict
         # @param instance: which instance of the data
         # @param item: used to build key
@@ -242,11 +242,13 @@ class Monitor(object):
     #         instance_list = self._get_instance_list_from_cache()
     #     return instance_list
     @classmethod
-    def decode_password(cls,passwd):
-        return str(passwd).replace('%2C',',').replace('%5C','/').replace('%26','&')
+    def decode_password(cls, passwd):
+        return str(passwd).replace('%2C', ',').replace('%5C', '/').replace('%26', '&')
+
     @classmethod
-    def encode_password(cls,passwd):
-        return str(passwd).replace(',','%2C').replace('/','%5C').replace('&','%26')
+    def encode_password(cls, passwd):
+        return str(passwd).replace(',', '%2C').replace('/', '%5C').replace('&', '%26')
+
     @classmethod
     def get_discovery_data(cls, attribute_name_list, discovery_func=None, procname=None):
         """

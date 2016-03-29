@@ -32,8 +32,8 @@ def discovery_redis():
         redis_passwd = ''
         config_files = []
 
-        if os.path.isdir(redis_process.cwd())  :
-            cwd_try=os.path.join(redis_process.cwd() , redis_conf_file_name)
+        if os.path.isdir(redis_process.cwd()):
+            cwd_try = os.path.join(redis_process.cwd(), redis_conf_file_name)
             if os.path.exists(cwd_try):
                 config_files.append(cwd_try)
             else:
@@ -65,6 +65,8 @@ def discovery_redis():
             redis_ip=Monitor.get_local_ip()
         redises.append([redis_ip, redis_port, redis_passwd])
     return redises
+
+
 def get_redis_data(instance_name, *args):
     """
     get monitor data from redis
@@ -77,11 +79,13 @@ def get_redis_data(instance_name, *args):
 
     r = redis.StrictRedis(host=ip, port=port, password=passwd)
     d = r.info()
+    c = r.config_get('maxmemory')
+    d['max_memory'] = c['maxmemory']
     check_items = {
         'redis_version': str,
         'redis_mode': str,  # standalone,
         'uptime_in_seconds': int,
-        'process_id':int,
+        'process_id': int,
         # Clients
         'connected_clients': int,  # 当前客户端连接数
         'blocked_clients': int,  # 正在等待阻塞命令（BLPOP、BRPOP、BRPOPLPUSH）的客户端的数量
@@ -91,6 +95,7 @@ def get_redis_data(instance_name, *args):
         'client_longest_output_list': int,  # 当前连接的客户端当中，最长的输出列表
         'client_biggest_input_buf': int,  # 当前连接的客户端当中，最大输入缓存
         # Memory
+        'max_memory': int, # 配置文件限制的最大内存 以 byte 为单位，0代表不限制
         'used_memory': int,  # 由redis分配器分配的内存总量，以字节（byte）为单位
         'used_memory_rss': int,  # 从操作系统的角度，返回rRedis已分配的内存总量（俗称常驻集大小),这个值和top、ps等命令的输出一致。
         'used_memory_peak': int,  # redis的内存消耗峰值（以字节为单位）

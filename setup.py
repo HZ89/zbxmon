@@ -7,7 +7,7 @@ from distutils.core import setup
 
 setup(
     name='zbxmon',
-    version='0.1',
+    version='0.1.2',
     packages=['zbxmon', 'zbxmon/lib'],
     provides=['zbxmon'],
     url='https://github.com/damagedcode/zbxmon',
@@ -18,6 +18,7 @@ setup(
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r').read(),
     scripts=[
         'scripts/zbxmon',
-    ]
+    ],
+    requires=['psutil', 'netifaces', 'pymongo', 'python-memcached']
 )
 

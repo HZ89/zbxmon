@@ -512,7 +512,7 @@ class MySQL_Monitor(object):
             count = cur.execute("flush hosts")
             count = cur.execute(
                 "/*!50001 set old_passwords=off*/; GRANT SUPER,PROCESS,REPLICATION CLIENT ON *.* to '%s'@'%s' identified by '%s' /*!50001 WITH MAX_USER_CONNECTIONS 5 */" % (
-                    user, host, passwd))
+                    user, host, passwd)) #TODO: mysql 5.6 have no old_passwords
             count = cur.execute("flush privileges")
             result = 1
         except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError) as e:
@@ -526,7 +526,7 @@ class MySQL_Monitor(object):
             if conn: conn.close()
         return result, message
 
-    @classmethod
+
     def get_monitor_data(cls, host=None, port=None, user=None, passwd=None, socket=None):
         '''
         collect performance data from a mysql instance.
