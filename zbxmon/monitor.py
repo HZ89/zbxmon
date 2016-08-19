@@ -41,7 +41,7 @@ class Monitor(object):
 
     @classmethod
     def get_service_list(cls):
-        os.chdir('./lib')
+        os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib'))
         available = []
         for file in glob.glob('*_monitor.py'):
             _, _, name = get_func_list(file.split('_')[0])

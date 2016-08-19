@@ -17,8 +17,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -114,7 +112,3 @@ extool/Seadog_ETCD_Template.xml
 extool/seadog_codisDashboard_template.xml
 extool/seadog_codisProxy_template.xml
 extool/seadog_kingshard_template.xml
-zbxmon/__init__.pyc
-zbxmon/lib/__init__.pyc
-zbxmon/lib/auto_import_func.pyc
-zbxmon/monitor.pyc
