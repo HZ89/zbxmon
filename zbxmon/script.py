@@ -12,7 +12,7 @@ import argparse
 # UserParameter=service.discovery[*],/opt/17173_install/zabbix-2.4.1/externalscripts/monitor  --service=$1 --discovery --macros=$2 --extend=$3
 
 @arg('--discovery', '-D', default=False, required=False, help='Discovery the service instance and return json data')
-@arg('--service', '-S', required=True, help='the service name of monitor')
+@arg('--service', '-S', required=False, help='the service name of monitor')
 @arg('--instance', '-I', help='the name of the instance you want')
 @arg('--item', '-K', help='the item of you want')
 @arg('--macros', '-M', help='the macro list, used to build discovery data eg:p1,p2,p3')
@@ -28,6 +28,8 @@ def start(args):
     """
     if args.discovery:
         assert not args.macros is None, 'must have macros'
+    elif args.list:
+        print ' '.join(Monitor.get_service_list())
     else:
         assert not args.instance is None, 'must have instance'
         # assert not args.item is None, 'must have item'
@@ -36,17 +38,18 @@ def start(args):
     if args.extend:
         arg_list = args.extend.split('/')
 
-    monitor = Monitor(args.service, cache_path=args.cache if args.cache else None)
+    if args.service:
+        monitor = Monitor(args.service, cache_path=args.cache if args.cache else None)
 
-    if args.discovery:
-        print monitor.discovery(args.macros.split('/'), *arg_list)
-    else:
-        if args.item:
-            print monitor.load_data(args.instance, args.item, *arg_list)
-        if args.list:
-            print "Monitor Items (in %s)" % args.instance
-            for it in sorted(monitor.load_keys(args.instance, *arg_list)):
-                print it
+        if args.discovery:
+            print monitor.discovery(args.macros.split('/'), *arg_list)
+        else:
+            if args.item:
+                print monitor.load_data(args.instance, args.item, *arg_list)
+            if args.list:
+                print "Monitor Items (in %s)" % args.instance
+                for it in sorted(monitor.load_keys(args.instance, *arg_list)):
+                    print it
 
 
 def zsmc_main():

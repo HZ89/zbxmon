@@ -19,6 +19,5 @@ setup(
     scripts=[
         'scripts/zbxmon',
     ],
-    requires=['psutil', 'netifaces', 'pymongo', 'python-memcached']
 )
 

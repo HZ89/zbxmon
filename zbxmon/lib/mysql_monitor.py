@@ -526,7 +526,7 @@ class MySQL_Monitor(object):
             if conn: conn.close()
         return result, message
 
-
+    @classmethod
     def get_monitor_data(cls, host=None, port=None, user=None, passwd=None, socket=None):
         '''
         collect performance data from a mysql instance.

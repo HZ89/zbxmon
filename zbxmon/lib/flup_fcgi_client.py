@@ -372,9 +372,13 @@ class FCGIApp(object):
                 break
 
             # TODO: Better error handling
-            header, value = line.split(':', 1)
-            header = header.strip().lower()
-            value = value.strip()
+            if not line.find(':') == -1 :
+                header, value = line.split(':', 1)
+                header = header.strip().lower()
+                value = value.strip()
+            else:
+                header = ''
+                value = ''
 
             if header == 'status':
                 # Special handling of Status header

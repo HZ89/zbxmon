@@ -9,6 +9,7 @@ import psutil
 from zbxmon.monitor import Monitor
 
 BINNAME = 'redis-server'
+CODISBINNAME = 'codis-server'
 
 def discovery_redis():
     """
@@ -21,7 +22,7 @@ def discovery_redis():
     redis_conf_file_name = 'redis.conf'
     for redis_process in [x
                           for x in psutil.process_iter()
-                          if len(x.cmdline()) > 0 and os.path.basename(x.exe()) == BINNAME]:
+                          if len(x.cmdline()) > 0 and (os.path.basename(x.exe()) == BINNAME or os.path.basename(x.exe()) == CODISBINNAME)]:
         try:
             redis_ip, redis_port = sorted([laddr.laddr
                                            for laddr in redis_process.connections()
@@ -61,9 +62,10 @@ def discovery_redis():
                     break
             except:
                 pass
-        if redis_ip=='0.0.0.0':
+        if redis_ip=='0.0.0.0' or redis_ip=='::' or redis_ip=='127.0.0.1' or redis_ip=='':
             redis_ip=Monitor.get_local_ip()
-        redises.append([redis_ip, redis_port, redis_passwd])
+        if [redis_ip, redis_port, redis_passwd] not in redises:
+            redises.append([redis_ip, redis_port, redis_passwd])
     return redises
 
 
@@ -136,6 +138,8 @@ def get_redis_data(instance_name, *args):
     redis_stats = {k: d[k] if d.has_key(k) else v() for k, v in check_items.iteritems()}
     redis_stats['role']=1 if redis_stats.get('role','master') == 'master' else 2
     redis_stats['keyspace_hits_rate']='{0:.2f}'.format(float(redis_stats.get('keyspace_hits',0))/float(redis_stats.get('keyspace_hits',1)+redis_stats.get('keyspace_misses',0)+0.01)*100)
+    if not redis_stats.get('max_memory') == '0':
+	    redis_stats['memory_used_percent']='{0:.2f}'.format(float((redis_stats.get('used_memory'))/float(redis_stats.get('max_memory'))*100))
     if redis_stats['connected_slaves'] > 0:
         slave_lists = set()
         for i in range(redis_stats['connected_slaves']):

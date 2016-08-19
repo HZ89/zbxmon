@@ -1,9 +1,7 @@
 # -*- coding: utf8 -*-
-__author__ = 'Harrison'
-
 import json
 import fcntl
-import os
+import os, glob
 import hashlib
 import time
 import psutil
@@ -12,6 +10,7 @@ from functools import partial
 from fcntl import LOCK_EX, LOCK_UN
 from zbxmon.lib.auto_import_func import get_func_list
 from re import search
+__author__ = 'Harrison'
 
 
 class Monitor(object):
@@ -39,6 +38,21 @@ class Monitor(object):
         except (IOError, ValueError):
             self._cache_file = open(self._cache_file_path, "w+")
             fcntl.lockf(self._cache_file.fileno(), LOCK_EX)
+
+    @classmethod
+    def get_service_list(cls):
+        os.chdir('./lib')
+        available = []
+        for file in glob.glob('*_monitor.py'):
+            _, _, name = get_func_list(file.split('_')[0])
+            available.append(name)
+
+        curr_service = []
+        for p in psutil.process_iter():
+            pname = os.path.basename(p.exe())
+            if pname in available:
+                curr_service.append(pname)
+        return curr_service
 
     @classmethod
     def get_local_ip(cls):
