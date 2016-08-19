@@ -8,7 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'codis-ha'
 
-def discovery_codisHa():
+def discovery_codisHa(*args):
     '''
     discovery codis-ha instance's host and port
     '''

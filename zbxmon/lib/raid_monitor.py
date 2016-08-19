@@ -5,7 +5,7 @@ import re
 import commands
 from zbxmon.monitor import Monitor
 
-def discovery_raid(args):
+def discovery_raid(*args):
     '''
     discovery raid instance's adapters and disks
     '''

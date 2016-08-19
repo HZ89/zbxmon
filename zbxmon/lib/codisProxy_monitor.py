@@ -8,7 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'codis-proxy'
 
-def discovery_codisProxy():
+def discovery_codisProxy(*args):
     '''
     discovery codis-proxy instance's host and port
     '''

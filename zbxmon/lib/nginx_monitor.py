@@ -15,7 +15,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'nginx'
 
-def discovery_nginx(status_path=False):
+def discovery_nginx(status_path=False, *args):
     '''
     discovery nginx instance's host and port
     '''

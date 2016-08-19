@@ -8,7 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'kingshard'
 
-def discovery_kingshard():
+def discovery_kingshard(*args):
     '''
     discovery kingshard instance's host and port
     '''

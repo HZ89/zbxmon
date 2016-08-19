@@ -16,7 +16,7 @@ from zbxmon.monitor import Monitor
 #     exit()
 
 
-def discovery_ipmi(arg=''):
+def discovery_ipmi(arg='', *args):
     '''
     discovery ipmi instance
     '''

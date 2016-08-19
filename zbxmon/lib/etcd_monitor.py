@@ -11,7 +11,7 @@ from zbxmon.monitor import Monitor
 BINNAME = 'etcd'
 CFG_DIR = '/etc/etcd/'
 
-def discovery_etcd():
+def discovery_etcd(*args):
     '''
     discovery etcd instance's host and port
     '''

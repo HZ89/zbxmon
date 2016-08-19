@@ -11,7 +11,7 @@ from zbxmon.monitor import Monitor
 BINNAME = 'redis-server'
 CODISBINNAME = 'codis-server'
 
-def discovery_redis():
+def discovery_redis(*args):
     """
     find redis instance
     @return: [(ip, prot, passwd)]

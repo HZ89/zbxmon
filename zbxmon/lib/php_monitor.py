@@ -16,7 +16,7 @@ import flup_fcgi_client as fcgi_client
 
 BINNAME = 'php-fpm'
 
-def discovery_php(ALL=False):
+def discovery_php(ALL=False, *args):
     '''
     discovery php-fpm instance's host and port
     '''

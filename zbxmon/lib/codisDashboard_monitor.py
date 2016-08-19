@@ -8,7 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'codis-dashboard'
 
-def discovery_codisDashboard():
+def discovery_codisDashboard(*args):
     '''
     discovery codis-dashboard instance's host and port
     '''

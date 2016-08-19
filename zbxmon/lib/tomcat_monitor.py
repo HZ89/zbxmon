@@ -13,7 +13,7 @@ import commands
 
 BINNAME = 'java'
 
-def discovery_tomcat():
+def discovery_tomcat(*args):
     '''
     discovery tomcat instance's host and port
     '''

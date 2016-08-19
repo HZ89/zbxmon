@@ -40,19 +40,38 @@ class Monitor(object):
             fcntl.lockf(self._cache_file.fileno(), LOCK_EX)
 
     @classmethod
-    def get_service_list(cls):
+    def get_service_list(cls, *args):
+        """
+        a UGLY func to get all service where can be monitor on a server
+        @param args: the extend args from cmd line
+        @return: all service by json
+        """
         os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib'))
-        available = []
+        available = {}
         for file in glob.glob('*_monitor.py'):
-            _, _, name = get_func_list(file.split('_')[0])
-            available.append(name)
+            _, discovery_func, name = get_func_list(file.split('_')[0])
+            available.update({name: discovery_func})
 
         curr_service = []
         for p in psutil.process_iter():
             pname = os.path.basename(p.exe())
-            if pname in available:
+            if pname in available.keys():
                 curr_service.append(pname)
-        return curr_service
+
+        result = {'data': []}
+        for service in curr_service:
+            if available[service]:
+                discovery_func = available[service]
+                if args:
+                    discovery_func = partial(discovery_func, *args)
+            else:
+                discovery_func = partial(Monitor.get_ip_port(service))
+
+            for instance in discovery_func():
+                feature = '/'.join(instance)
+                result['data'].append({'{#TYPE}': service, '{#FEATURE}': feature})
+
+        return json.dumps(result)
 
     @classmethod
     def get_local_ip(cls):

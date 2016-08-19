@@ -16,7 +16,8 @@ import argparse
 @arg('--instance', '-I', help='the name of the instance you want')
 @arg('--item', '-K', help='the item of you want')
 @arg('--macros', '-M', help='the macro list, used to build discovery data eg:p1,p2,p3')
-@arg('--extend', '-E', help='extend args eg. p,p1,p2')
+# TODO: when extend work with list how to send args to diff service
+@arg('--extend', '-E', help='extend args eg. p/p1/p2')
 @arg('--cache', '-C', help='cache path')
 @arg('--list', '-L', default=False, help='list monitor items for this instance')
 @expects_obj
@@ -26,17 +27,19 @@ def start(args):
     @param args:
     @return: string when get service data, json when discovery
     """
+    arg_list = []
+    if args.extend:
+        arg_list = args.extend.split('/')
+
     if args.discovery:
         assert not args.macros is None, 'must have macros'
     elif args.list:
-        print ' '.join(Monitor.get_service_list())
+        print Monitor.get_service_list(*arg_list)
+
     else:
         assert not args.instance is None, 'must have instance'
         # assert not args.item is None, 'must have item'
 
-    arg_list = []
-    if args.extend:
-        arg_list = args.extend.split('/')
 
     if args.service:
         monitor = Monitor(args.service, cache_path=args.cache if args.cache else None)
