@@ -28,7 +28,7 @@ def start(args):
     @param args:
     @return: string when get service data, json when discovery
     """
-    fs = args.fieldsparator
+    fs = args.fieldseparator
     arg_list = []
     if args.extend:
         arg_list = args.extend.split(fs)
@@ -36,7 +36,7 @@ def start(args):
     if args.discovery:
         assert not args.macros is None, 'must have macros'
     elif args.list:
-        print Monitor.get_service_list(*arg_list)
+        print Monitor.get_service_list(fs, *arg_list)
 
     else:
         assert not args.instance is None, 'must have instance'

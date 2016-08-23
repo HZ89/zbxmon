@@ -42,13 +42,14 @@ class Monitor(object):
             fcntl.lockf(self._cache_file.fileno(), LOCK_EX)
 
     @classmethod
-    def get_service_list(cls, *args):
+    def get_service_list(cls, fs, *args):
         """
         a UGLY func to get all service where can be monitor on a server
+        @param fs: field separator
         @param args: the extend args from cmd line
         @return: all service by json
         """
-        hostname = socket.gethostbyname()
+        hostname = socket.gethostname()
         os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib'))
         available = {}
         for file in glob.glob('*_monitor.py'):
@@ -71,7 +72,7 @@ class Monitor(object):
                 discovery_func = partial(Monitor.get_ip_port(service))
 
             for instance in discovery_func():
-                feature = '/'.join(instance)
+                feature = fs.join(instance)
                 result['data'].append({'{#TYPE}': service, '{#FEATURE}': feature, '{#HOSTNAME}': hostname})
 
         return json.dumps(result)
