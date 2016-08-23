@@ -20,6 +20,7 @@ import argparse
 @arg('--extend', '-E', help='extend args eg. p/p1/p2')
 @arg('--cache', '-C', help='cache path')
 @arg('--list', '-L', default=False, help='list monitor items for this instance')
+@arg('--fieldseparator', '-F', default='/', help='Use for the input field separator')
 @expects_obj
 def start(args):
     """
@@ -27,9 +28,10 @@ def start(args):
     @param args:
     @return: string when get service data, json when discovery
     """
+    fs = args.fieldsparator
     arg_list = []
     if args.extend:
-        arg_list = args.extend.split('/')
+        arg_list = args.extend.split(fs)
 
     if args.discovery:
         assert not args.macros is None, 'must have macros'
@@ -40,12 +42,11 @@ def start(args):
         assert not args.instance is None, 'must have instance'
         # assert not args.item is None, 'must have item'
 
-
     if args.service:
         monitor = Monitor(args.service, cache_path=args.cache if args.cache else None)
 
         if args.discovery:
-            print monitor.discovery(args.macros.split('/'), *arg_list)
+            print monitor.discovery(args.macros.split(fs), *arg_list)
         else:
             if args.item:
                 print monitor.load_data(args.instance, args.item, *arg_list)

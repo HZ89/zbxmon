@@ -1,7 +1,9 @@
 # -*- coding: utf8 -*-
 import json
 import fcntl
-import os, glob
+import os
+import glob
+import socket
 import hashlib
 import time
 import psutil
@@ -46,6 +48,7 @@ class Monitor(object):
         @param args: the extend args from cmd line
         @return: all service by json
         """
+        hostname = socket.gethostbyname()
         os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib'))
         available = {}
         for file in glob.glob('*_monitor.py'):
@@ -69,7 +72,7 @@ class Monitor(object):
 
             for instance in discovery_func():
                 feature = '/'.join(instance)
-                result['data'].append({'{#TYPE}': service, '{#FEATURE}': feature})
+                result['data'].append({'{#TYPE}': service, '{#FEATURE}': feature, '{#HOSTNAME}': hostname})
 
         return json.dumps(result)
 
