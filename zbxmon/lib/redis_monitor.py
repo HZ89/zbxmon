@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 __author__ = 'Harrison'
 
-import os,sys
+import os, sys
 import redis
 import re
 import psutil
@@ -10,6 +10,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'redis-server'
 CODISBINNAME = 'codis-server'
+
 
 def discovery_redis(*args):
     """
@@ -22,7 +23,8 @@ def discovery_redis(*args):
     redis_conf_file_name = 'redis.conf'
     for redis_process in [x
                           for x in psutil.process_iter()
-                          if len(x.cmdline()) > 0 and (os.path.basename(x.exe()) == BINNAME or os.path.basename(x.exe()) == CODISBINNAME)]:
+                          if len(x.cmdline()) > 0 and (
+                os.path.basename(x.exe()) == BINNAME or os.path.basename(x.exe()) == CODISBINNAME)]:
         try:
             redis_ip, redis_port = sorted([laddr.laddr
                                            for laddr in redis_process.connections()
@@ -62,8 +64,8 @@ def discovery_redis(*args):
                     break
             except:
                 pass
-        if redis_ip=='0.0.0.0' or redis_ip=='::' or redis_ip=='127.0.0.1' or redis_ip=='':
-            redis_ip=Monitor.get_local_ip()
+        if redis_ip == '0.0.0.0' or redis_ip == '::' or redis_ip == '127.0.0.1' or redis_ip == '':
+            redis_ip = Monitor.get_local_ip()
         if [redis_ip, redis_port, redis_passwd] not in redises:
             redises.append([redis_ip, redis_port, redis_passwd])
     return redises
@@ -77,7 +79,7 @@ def get_redis_data(instance_name, *args):
     """
 
     ip, port, passwd = instance_name.split('/')
-    passwd=Monitor.decode_password(passwd)
+    passwd = Monitor.decode_password(passwd)
 
     r = redis.StrictRedis(host=ip, port=port, password=passwd)
     d = r.info()
@@ -97,7 +99,7 @@ def get_redis_data(instance_name, *args):
         'client_longest_output_list': int,  # 当前连接的客户端当中，最长的输出列表
         'client_biggest_input_buf': int,  # 当前连接的客户端当中，最大输入缓存
         # Memory
-        'max_memory': int, # 配置文件限制的最大内存 以 byte 为单位，0代表不限制
+        'max_memory': int,  # 配置文件限制的最大内存 以 byte 为单位，0代表不限制
         'used_memory': int,  # 由redis分配器分配的内存总量，以字节（byte）为单位
         'used_memory_rss': int,  # 从操作系统的角度，返回rRedis已分配的内存总量（俗称常驻集大小),这个值和top、ps等命令的输出一致。
         'used_memory_peak': int,  # redis的内存消耗峰值（以字节为单位）
@@ -119,7 +121,7 @@ def get_redis_data(instance_name, *args):
         'keyspace_misses': int,  # 不命中 key 的次数
         'pubsub_channels': int,  # 当前使用中的频道数量
         'pubsub_patterns': int,  # 当前使用的模式的数量
-        #'latest_fork_usec':int,
+        # 'latest_fork_usec':int,
         # Replication
         'role': str,  # 当前实例的角色master还是slave
         'master_host': str,
@@ -128,7 +130,7 @@ def get_redis_data(instance_name, *args):
         'master_last_io_seconds_ago': int,
         'master_sync_in_progress': int,
         'slave_lists': str,
-        #'slave0:ip=192.168.200.25,port=62710,state=online,offset=823669419,lag=1     #offset 当前从的数据偏移量位置
+        # 'slave0:ip=192.168.200.25,port=62710,state=online,offset=823669419,lag=1     #offset 当前从的数据偏移量位置
         # CPU
         'used_cpu_sys': float,
         'used_cpu_user': float,
@@ -136,10 +138,12 @@ def get_redis_data(instance_name, *args):
         'used_cpu_user_children': float,
     }
     redis_stats = {k: d[k] if d.has_key(k) else v() for k, v in check_items.iteritems()}
-    redis_stats['role']=1 if redis_stats.get('role','master') == 'master' else 2
-    redis_stats['keyspace_hits_rate']='{0:.2f}'.format(float(redis_stats.get('keyspace_hits',0))/float(redis_stats.get('keyspace_hits',1)+redis_stats.get('keyspace_misses',0)+0.01)*100)
+    redis_stats['role'] = 1 if redis_stats.get('role', 'master') == 'master' else 2
+    redis_stats['keyspace_hits_rate'] = '{0:.2f}'.format(float(redis_stats.get('keyspace_hits', 0)) / float(
+        redis_stats.get('keyspace_hits', 1) + redis_stats.get('keyspace_misses', 0) + 0.01) * 100)
     if not redis_stats.get('max_memory') == '0':
-	    redis_stats['memory_used_percent']='{0:.2f}'.format(float((redis_stats.get('used_memory'))/float(redis_stats.get('max_memory'))*100))
+        redis_stats['memory_used_percent'] = '{0:.2f}'.format(
+            float((redis_stats.get('used_memory')) / float(redis_stats.get('max_memory')) * 100))
     if redis_stats['connected_slaves'] > 0:
         slave_lists = set()
         for i in range(redis_stats['connected_slaves']):

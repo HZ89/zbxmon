@@ -8,6 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'codis-ha'
 
+
 def discovery_codisHa(*args):
     '''
     discovery codis-ha instance's host and port
@@ -26,12 +27,13 @@ def discovery_codisHa(*args):
                 if opt.find('--dashboard=') == 0:
                     address = opt.strip().split('=')[1].split(':')[0].strip()
                     port = opt.strip().split('=')[1].split(':')[1].strip()
-                    result.append([address,port])
+                    result.append([address, port])
     return result
 
 
 def get_codisHa_data(instance_name=''):
     pass
+
 
 if __name__ == "__main__":
     get_codisHa_data()

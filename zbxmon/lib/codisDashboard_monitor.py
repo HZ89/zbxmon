@@ -8,6 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'codis-dashboard'
 
+
 def discovery_codisDashboard(*args):
     '''
     discovery codis-dashboard instance's host and port
@@ -33,20 +34,19 @@ def discovery_codisDashboard(*args):
                 if line.find('admin_addr') == 0:
                     address = line.split('=')[1].strip().split(':')[0].strip('"')
                     port = line.split('=')[1].strip().split(':')[1].strip('"')
-                    result.append([address,port])
+                    result.append([address, port])
     return result
 
 
 def get_codisDashboard_data(instance_name=''):
-
     # codis-ha alive monitor
     cmdline = ''
     ip = instance_name.split('/')[0]
     port = instance_name.split('/')[1]
-    
+
     result = {}
-   
-    ip_addr = '--dashboard='+str(ip)+':'+str(port) 
+
+    ip_addr = '--dashboard=' + str(ip) + ':' + str(port)
     for i in psutil.process_iter():
         if i.name() == 'codis-ha':
             cmdline = i.cmdline()
@@ -55,6 +55,7 @@ def get_codisDashboard_data(instance_name=''):
                     result['codisHa_status'] = 1
 
     return result
+
 
 if __name__ == "__main__":
     get_codisDashboard_data()

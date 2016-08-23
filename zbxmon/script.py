@@ -1,10 +1,11 @@
 #!/opt/17173_install/python-2.7.6/bin/python2.7
-#-*- coding: utf8 -*-
+# -*- coding: utf8 -*-
 
-__author__ = 'Harrison'
+import argparse
 from zbxmon.monitor import Monitor
 from argh import ArghParser, arg, expects_obj
-import argparse
+__author__ = 'Harrison'
+
 
 # TODO:Completion script comments
 
@@ -60,6 +61,7 @@ def zsmc_main():
     parser = ArghParser(formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.set_default_command(start)
     parser.dispatch()
+
 
 if __name__ == '__main__':
     zsmc_main()

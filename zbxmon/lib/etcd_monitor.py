@@ -11,6 +11,7 @@ from zbxmon.monitor import Monitor
 BINNAME = 'etcd'
 CFG_DIR = '/etc/etcd/'
 
+
 def discovery_etcd(*args):
     '''
     discovery etcd instance's host and port
@@ -40,13 +41,14 @@ def discovery_etcd(*args):
                     port = address_port.split(':')[1]
                     if address == '0.0.0.0':
                         address = host
-                    result.append([address,port,name])
+                    result.append([address, port, name])
     return result
 
 
 def get_etcd_data(instance_name=''):
     # etcd cluster health
     pass
+
 
 if __name__ == "__main__":
     get_etcd_data()

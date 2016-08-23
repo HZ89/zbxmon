@@ -16,6 +16,7 @@ import flup_fcgi_client as fcgi_client
 
 BINNAME = 'php-fpm'
 
+
 def discovery_php(ALL=False, *args):
     '''
     discovery php-fpm instance's host and port
@@ -31,14 +32,14 @@ def discovery_php(ALL=False, *args):
             fpm_cmdline = i.cmdline()
 
     if fpm_pid and fpm_cmdline:
-        
+
         if len(fpm_cmdline) > 1:
             fpm_config_file = fpm_cmdline[2]
         elif len(fpm_cmdline) == 1:
             t = fpm_cmdline[0]
             s_index = t.find('(')
             e_index = t.find(')')
-            fpm_config_file = t[s_index+1:e_index]
+            fpm_config_file = t[s_index + 1:e_index]
 
         f = open(fpm_config_file, 'r')
         master_cfg_content = f.read()
@@ -53,11 +54,11 @@ def discovery_php(ALL=False, *args):
             include_dir = '/'
             for i in l:
                 include_dir = include_dir + i + '/'
-    
+
             if include_dir:
                 count = 0
                 for cfg_file in os.listdir(include_dir):
-                    f = open(include_dir+cfg_file, 'r')
+                    f = open(include_dir + cfg_file, 'r')
                     single_cfg_content = f.read()
                     f.close()
                     single_p = re.compile('\npm\.status_path.*', re.I)
@@ -66,7 +67,7 @@ def discovery_php(ALL=False, *args):
                     single_ping_m = single_ping_p.search(single_cfg_content)
                     single_pong_p = re.compile('\nping\.response.*', re.I)
                     single_pong_m = single_pong_p.search(single_cfg_content)
-                    
+
                     if single_m:
                         status_path = single_m.group(0)
                         status_path = status_path.strip()
@@ -80,7 +81,7 @@ def discovery_php(ALL=False, *args):
                                 listen = single_m.group(0)
                                 listen = listen.strip()
                                 listen = listen.split('=')[1].strip()
-                            
+
                                 if listen:
                                     if re.search("^(\d+\.){3}\d+:\d+$", listen):
                                         ip = listen.split(':')[0]
@@ -110,7 +111,7 @@ def discovery_php(ALL=False, *args):
                         if pong_path:
                             fpm_cfg_dict[count]['pong_path'] = pong_path
 
-                    count += 1  
+                    count += 1
         else:
             fpm_cfg_dict[0] = {}
             master_p = re.compile('\npm\.status_path.*', re.I)
@@ -162,19 +163,19 @@ def discovery_php(ALL=False, *args):
                 if pong_path:
                     fpm_cfg_dict[0]['pong_path'] = pong_path
 
-   
-    # print fpm_cfg_dict            
+    # print fpm_cfg_dict
     # {0: {'status_path': '/status', 'socket': '/dev/shm/php-fpm.socket'}, 1: {'ip': '127.0.0.1', 'status_path': '/status', 'port': '9001'}}
     result = []
     for i in fpm_cfg_dict.keys():
         if len(fpm_cfg_dict[i]) == 5:
-            result.append([fpm_cfg_dict[i]['ip'],fpm_cfg_dict[i]['port']])
+            result.append([fpm_cfg_dict[i]['ip'], fpm_cfg_dict[i]['port']])
         if len(fpm_cfg_dict[i]) == 4:
-            result.append(['127.0.0.1',fpm_cfg_dict[i]['socket']])
+            result.append(['127.0.0.1', fpm_cfg_dict[i]['socket']])
     if ALL == False:
         return result
     elif ALL == True:
         return fpm_cfg_dict
+
 
 def get_php_data(instance_name='', *args):
     """
@@ -233,7 +234,7 @@ def get_php_data(instance_name='', *args):
                     'QUERY_STRING': 'json',
                     'REQUEST_METHOD': 'GET'
                 }
-    
+
     code, headers, out, err = fcgi(env)
     out = out.lstrip('{').rstrip('}')
     l_out = out.split(',')
@@ -244,7 +245,7 @@ def get_php_data(instance_name='', *args):
     alive_code, alive_headers, alive_out, alive_err = fcgi(alive_env)
     alive_out = alive_out.lstrip('{').rstrip('}').strip()
 
-# {"pool":"www","process manager":"dynamic","start time":1447740439,"start since":13513,"accepted conn":17,"listen queue":0,"max listen queue":0,"listen queue len":0,"idle processes":4,"active processes":1,"total processes":5,"max active processes":1,"max children reached":0,"slow requests":0}
+    # {"pool":"www","process manager":"dynamic","start time":1447740439,"start since":13513,"accepted conn":17,"listen queue":0,"max listen queue":0,"listen queue len":0,"idle processes":4,"active processes":1,"total processes":5,"max active processes":1,"max children reached":0,"slow requests":0}
     result = {}
     if "start since" in d_out:
         result['start_since'] = int(d_out["start since"])

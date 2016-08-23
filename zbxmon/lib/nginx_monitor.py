@@ -15,16 +15,17 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'nginx'
 
+
 def discovery_nginx(status_path=False, *args):
     '''
     discovery nginx instance's host and port
     '''
     nginx_pid = ''
-    instance_list=[]
+    instance_list = []
     for i in psutil.process_iter():
         if i.name() == BINNAME and i.username() == 'root':
             nginx_pid = i.pid
-    
+
     nginx_proc_file = '/proc/{0}/cmdline'.format(nginx_pid)
 
     if os.path.exists(nginx_proc_file):
@@ -37,7 +38,7 @@ def discovery_nginx(status_path=False, *args):
         cfg_content = f.read()
         f.close()
 
-#        print cfg_content
+        #        print cfg_content
         p_status_on = re.compile('stub_status\s+on;', re.I)
         m_status_on = p_status_on.search(cfg_content)
         if m_status_on:
@@ -49,7 +50,7 @@ def discovery_nginx(status_path=False, *args):
             m_port = p_port.search(cfg_content)
             if m_port:
                 l_port = m_port.group(0).strip().strip(';').split()[-1].split(':')
-                if(len(l_port)==2):
+                if (len(l_port) == 2):
                     port = l_port[1]
                 else:
                     port = l_port[0]
@@ -57,10 +58,11 @@ def discovery_nginx(status_path=False, *args):
 
     result = []
     if not status_path:
-        result.append([str(ip),str(port)])
+        result.append([str(ip), str(port)])
         return result
     else:
         return path
+
 
 def get_nginx_data(instance_name='', *args):
     """
@@ -71,13 +73,12 @@ def get_nginx_data(instance_name='', *args):
     path = discovery_nginx(status_path=True)
     ip = instance_name.strip().split('/')[0]
     port = instance_name.strip().split('/')[1]
-    
 
     default_url = 'http://{0}:{1}{2}'.format(ip, port, path)
     f = urllib.urlopen(default_url)
 
     nginx_status_contents = f.read()
-    
+
     for line in nginx_status_contents.split("\n"):
         regx_obj = re.search(r"^Active\s+connections:\s+(\d+).*$", line, re.U)
         if regx_obj:

@@ -5,6 +5,7 @@ import pymongo
 
 BINNAME = 'mongod'
 
+
 def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
     """
     the func used to get mongodb data
@@ -19,11 +20,11 @@ def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
     status = None
     rs_status = None
     try:
-        status=coll.command('serverStatus', 1)
+        status = coll.command('serverStatus', 1)
     except:
         pass
     try:
-        rs_status=coll.command('replSetGetStatus',1)
+        rs_status = coll.command('replSetGetStatus', 1)
     except:
         pass
     db.disconnect()
@@ -34,18 +35,18 @@ def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
                              'uptime': status.get('uptime', 0),
                              # global lock
                              'globalLock_activeClients_total': status.get('globalLock', {}).get('activeClients',
-                                 {}).get('total', 0),
+                                                                                                {}).get('total', 0),
                              'globalLock_activeClients_readers': status.get('globalLock', {}).get('activeClients',
-                                 {}).get('readers', 0),
+                                                                                                  {}).get('readers', 0),
                              'globalLock_activeClients_writers': status.get('globalLock', {}).get('activeClients',
-                                 {}).get('writers', 0),
+                                                                                                  {}).get('writers', 0),
                              'globalLock_currentQueue_total': status.get('globalLock', {}).get('currentQueue', {}).get(
                                  'total', 0),
                              'globalLock_currentQueue_readers': status.get('globalLock', {}).get('currentQueue',
-                                 {}).get('readers', 0),
+                                                                                                 {}).get('readers', 0),
                              'globalLock_currentQueue_writers': status.get('globalLock', {}).get('currentQueue',
-                                 {}).get('writers', 0),
-                             #'globalLock_ratio': status.get('globalLock',{}).get('ratio',{}),
+                                                                                                 {}).get('writers', 0),
+                             # 'globalLock_ratio': status.get('globalLock',{}).get('ratio',{}),
                              # memory
                              'mem_resident': status.get('mem', {}).get('resident', 0) * 1024 * 1024,
                              'mem_virtual': status.get('mem', {}).get('virtual', 0) * 1024 * 1024,
@@ -100,12 +101,13 @@ def get_mongodb_data(instance_name, mongo_user, mongo_passwd):
                              'asserts_warning': status.get('asserts', {}).get('warning', 0),
                              'asserts_user': status.get('asserts', {}).get('user', 0),
                              'asserts_rollovers': status.get('asserts', {}).get('rollovers', 0)
-        })
-    mongo_status['replset_delay']=0
+                             })
+    mongo_status['replset_delay'] = 0
     if rs_status:
-        rs_members=[i['optime'] for i in rs_status['members'] if i['name']==instance_name or i['stateStr']=='PRIMARY']
+        rs_members = [i['optime'] for i in rs_status['members'] if
+                      i['name'] == instance_name or i['stateStr'] == 'PRIMARY']
         if len(rs_members) == 2:
-            mongo_status['replset_delay']=abs(rs_members[0].time-rs_members[1].time)
+            mongo_status['replset_delay'] = abs(rs_members[0].time - rs_members[1].time)
 
     for key in mongo_status.keys():
         mongo_status[key.lower()] = mongo_status.pop(key)

@@ -13,6 +13,7 @@ import commands
 
 BINNAME = 'java'
 
+
 def discovery_tomcat(*args):
     '''
     discovery tomcat instance's host and port
@@ -40,7 +41,7 @@ def discovery_tomcat(*args):
                                     listen_port = service_child.attrib['port']
 
             if monitor_port.isdigit() and listen_port.isdigit():
-                result.append([host,listen_port,monitor_port])
+                result.append([host, listen_port, monitor_port])
     return result
 
 
@@ -55,9 +56,9 @@ def get_tomcat_data(instance_name=''):
     result = {}
     if not os.path.exists(jmx):
         return 'Not Found /app/bin/jmxcmd.jar'
-    
+
     # java.lang:type=Memory HeapMemoryUsage
-    sys_cmd = "java -jar %s - %s:%s java.lang:type=Memory NonHeapMemoryUsage" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s java.lang:type=Memory NonHeapMemoryUsage" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         for i in output.split('\n'):
@@ -75,55 +76,56 @@ def get_tomcat_data(instance_name=''):
                 result['mem_used'] = m_used
 
     # java.lang:type=ClassLoading LoadedClassCount
-    sys_cmd = "java -jar %s - %s:%s java.lang:type=ClassLoading LoadedClassCount" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s java.lang:type=ClassLoading LoadedClassCount" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         load_class_count = output.split(' ')[-1].strip()
         result['load_class_count'] = load_class_count
 
     # java.lang:type=ClassLoading TotalLoadedClassCount
-    sys_cmd = "java -jar %s - %s:%s java.lang:type=ClassLoading TotalLoadedClassCount" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s java.lang:type=ClassLoading TotalLoadedClassCount" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         total_load_class_count = output.split(' ')[-1].strip()
         result['total_load_class_count'] = total_load_class_count
 
     # java.lang:type=ClassLoading UnloadedClassCount
-    sys_cmd = "java -jar %s - %s:%s java.lang:type=ClassLoading UnloadedClassCount" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s java.lang:type=ClassLoading UnloadedClassCount" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         unload_class_count = output.split(' ')[-1].strip()
         result['unload_class_count'] = unload_class_count
 
     # java.lang:type=Threading PeakThreadCount
-    sys_cmd = "java -jar %s - %s:%s java.lang:type=Threading PeakThreadCount" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s java.lang:type=Threading PeakThreadCount" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         peak_thread_count = output.split(' ')[-1].strip()
         result['peak_thread_count'] = peak_thread_count
 
     # java.lang:type=Threading ThreadCount
-    sys_cmd = "java -jar %s - %s:%s java.lang:type=Threading ThreadCount" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s java.lang:type=Threading ThreadCount" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         thread_count = output.split(' ')[-1].strip()
         result['thread_count'] = thread_count
-                
+
     # java.lang:type=Threading TotalStartedThreadCount
-    sys_cmd = "java -jar %s - %s:%s java.lang:type=Threading TotalStartedThreadCount" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s java.lang:type=Threading TotalStartedThreadCount" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         total_start_thread_count = output.split(' ')[-1].strip()
         result['total_start_thread_count'] = total_start_thread_count
-                
+
     # Catalina:type=Server serverInfo
-    sys_cmd = "java -jar %s - %s:%s Catalina:type=Server serverInfo" % (jmx,ip,monitor_port)
+    sys_cmd = "java -jar %s - %s:%s Catalina:type=Server serverInfo" % (jmx, ip, monitor_port)
     (status, output) = commands.getstatusoutput(sys_cmd)
     if not status:
         server_info = output.split(' ')[-1].strip()
         result['server_info'] = server_info
-                
+
     return result
+
 
 if __name__ == "__main__":
     get_tomcat_data()

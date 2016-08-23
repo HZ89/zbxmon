@@ -8,6 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'kingshard'
 
+
 def discovery_kingshard(*args):
     '''
     discovery kingshard instance's host and port
@@ -35,12 +36,13 @@ def discovery_kingshard(*args):
                     port = line.split(':')[2].strip()
                     if address == '0.0.0.0':
                         address = host
-                    result.append([address,port])
+                    result.append([address, port])
     return result
 
 
 def get_kingshard_data(instance_name=''):
     pass
+
 
 if __name__ == "__main__":
     get_kingshard_data()

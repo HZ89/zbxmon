@@ -8,6 +8,7 @@ from zbxmon.monitor import Monitor
 
 BINNAME = 'codis-proxy'
 
+
 def discovery_codisProxy(*args):
     '''
     discovery codis-proxy instance's host and port
@@ -33,12 +34,13 @@ def discovery_codisProxy(*args):
                 if line.find('admin_addr') == 0:
                     address = line.split('=')[1].strip().split(':')[0].strip('"')
                     port = line.split('=')[1].strip().split(':')[1].strip('"')
-                    result.append([address,port])
+                    result.append([address, port])
     return result
 
 
 def get_codisProxy_data(instance_name=''):
     pass
+
 
 if __name__ == "__main__":
     get_codisProxy_data()

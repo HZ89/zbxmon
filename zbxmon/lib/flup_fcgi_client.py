@@ -92,6 +92,7 @@ if __debug__:
     DEBUG = 0
     DEBUGLOG = '/tmp/fcgi_app.log'
 
+
     def _debug(level, msg):
         # pylint: disable=W0702
         if DEBUG < level:
@@ -193,6 +194,7 @@ class Record(object):
             recvLen += dataLen
             length -= dataLen
         return ''.join(dataList), recvLen
+
     _recvall = staticmethod(_recvall)
 
     def read(self, sock):
@@ -206,13 +208,13 @@ class Record(object):
             raise EOFError
 
         self.version, self.type, self.requestId, self.contentLength, \
-                      self.paddingLength = struct.unpack(FCGI_Header, header)
+        self.paddingLength = struct.unpack(FCGI_Header, header)
 
         if __debug__:
             _debug(9, 'read: fd = %d, type = %d, requestId = %d, '
-                             'contentLength = %d' %
-                             (sock.fileno(), self.type, self.requestId,
-                              self.contentLength))
+                      'contentLength = %d' %
+                   (sock.fileno(), self.type, self.requestId,
+                    self.contentLength))
 
         if self.contentLength:
             try:
@@ -246,6 +248,7 @@ class Record(object):
                     raise
             data = data[sent:]
             length -= sent
+
     _sendall = staticmethod(_sendall)
 
     def write(self, sock):
@@ -254,9 +257,9 @@ class Record(object):
 
         if __debug__:
             _debug(9, 'write: fd = %d, type = %d, requestId = %d, '
-                             'contentLength = %d' %
-                             (sock.fileno(), self.type, self.requestId,
-                              self.contentLength))
+                      'contentLength = %d' %
+                   (sock.fileno(), self.type, self.requestId,
+                    self.contentLength))
 
         header = struct.pack(FCGI_Header, self.version, self.type,
                              self.requestId, self.contentLength,
@@ -269,7 +272,6 @@ class Record(object):
 
 
 class FCGIApp(object):
-
     def __init__(self, connect=None, host=None, port=None, filterEnviron=True):
         if host is not None:
             assert port is not None
@@ -306,12 +308,12 @@ class FCGIApp(object):
         self._fcgiParams(sock, requestId, {})
 
         # Transfer wsgi.input to FCGI_STDIN
-        #content_length = int(environ.get('CONTENT_LENGTH') or 0)
+        # content_length = int(environ.get('CONTENT_LENGTH') or 0)
         s = ''
         while True:
-            #chunk_size = min(content_length, 4096)
-            #s = environ['wsgi.input'].read(chunk_size)
-            #content_length -= len(s)
+            # chunk_size = min(content_length, 4096)
+            # s = environ['wsgi.input'].read(chunk_size)
+            # content_length -= len(s)
             rec = Record(FCGI_STDIN, requestId)
             rec.contentData = s
             rec.contentLength = len(s)
@@ -340,7 +342,7 @@ class FCGIApp(object):
             elif inrec.type == FCGI_STDERR:
                 # Simply forward to wsgi.errors
                 err += inrec.contentData
-                #environ['wsgi.errors'].write(inrec.contentData)
+                # environ['wsgi.errors'].write(inrec.contentData)
             elif inrec.type == FCGI_END_REQUEST:
                 # TODO: Process appStatus/protocolStatus fields?
                 break
@@ -372,7 +374,7 @@ class FCGIApp(object):
                 break
 
             # TODO: Better error handling
-            if not line.find(':') == -1 :
+            if not line.find(':') == -1:
                 header, value = line.split(':', 1)
                 header = header.strip().lower()
                 value = value.strip()
@@ -392,8 +394,8 @@ class FCGIApp(object):
         result = result[pos:]
 
         # Set WSGI status, headers, and return result.
-        #start_response(status, headers)
-        #return [result]
+        # start_response(status, headers)
+        # return [result]
 
         return status, headers, result, err
 
@@ -438,7 +440,7 @@ class FCGIApp(object):
         return result
 
     def _fcgiParams(self, sock, requestId, params):
-        #print params
+        # print params
         rec = Record(FCGI_PARAMS, requestId)
         data = []
         for name, value in params.items():

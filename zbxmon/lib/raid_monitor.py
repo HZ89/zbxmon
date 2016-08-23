@@ -5,15 +5,16 @@ import re
 import commands
 from zbxmon.monitor import Monitor
 
+
 def discovery_raid(*args):
     '''
     discovery raid instance's adapters and disks
     '''
-    ( status, output ) = commands.getstatusoutput('which MegaCli')
+    (status, output) = commands.getstatusoutput('which MegaCli')
     if status:
         print 'No such file: MegaCli'
         exit()
-        
+
     adp_list = []
     enc_list = []
     virt_list = []
@@ -45,15 +46,15 @@ def discovery_raid(*args):
                 virt_list.append(i)
 
     for adp_id in adp_list:
-       	# disk id
+        # disk id
         sys_cmd = "MegaCli -PDGetNum -a{0} | grep 'Number' | cut -d ':' -f 2".format(adp_id)
         (status, output) = commands.getstatusoutput(sys_cmd)
         if not status:
             dev_num = output.strip()
             for i in range(int(dev_num)):
-                dev_list.append(i) 
+                dev_list.append(i)
 
-    # return result list
+                # return result list
     if args and args.strip() == 'BBU':
         for adp in adp_list:
             result.append([adp])
@@ -66,23 +67,21 @@ def discovery_raid(*args):
             for enc in enc_list:
                 for dev in dev_list:
                     result.append([adp, dev, enc])
-        
+
     return result
 
 
-
 def get_raid_data(instance_name='', *args):
-
     result = {}
 
     if args and list(args)[0] == 'BBU':
 
         adapter = instance_name.strip()
-#	print adapter
+        #	print adapter
 
         extend = list(args)[0]
         sys_cmd = "MegaCli -AdpBbuCmd -GetBbuStatus -a{0}".format(adapter)
-        
+
         (status, output) = commands.getstatusoutput(sys_cmd)
         if not status:
             p = re.compile('\s+Voltage\s+:\s+\w+', re.I)
@@ -94,26 +93,26 @@ def get_raid_data(instance_name='', *args):
             m = p.search(output)
             if m:
                 result['temperature'] = m.group(0).split(':')[1].strip()
-        
+
             p = re.compile('Learn Cycle Status.*', re.I)
             m = p.search(output)
             if m:
                 result['LCS'] = m.group(0).split(':')[1].strip()
-        
+
             p = re.compile('Remaining Capacity:.*', re.I)
             m = p.search(output)
             if m:
                 result['RC'] = m.group(0).split()[2].strip()
-        
+
             p = re.compile('Full Charge Capacity.*', re.I)
             m = p.search(output)
             if m:
                 result['FCC'] = m.group(0).split(':')[1].strip()
-        
+
     elif args and list(args)[0] == 'LD':
-    	
+
         adapter = instance_name.split('/')[0].strip()
-    	virtual = instance_name.split('/')[1].strip()
+        virtual = instance_name.split('/')[1].strip()
         sys_cmd = "MegaCli -LDInfo -L{0} -a{1}".format(virtual, adapter)
         (status, output) = commands.getstatusoutput(sys_cmd)
         if not status:
@@ -195,7 +194,7 @@ def get_raid_data(instance_name='', *args):
             m = p.search(output)
             if m:
                 result['slot_number'] = m.group(0).split(':')[1].strip()
-    
+
             p = re.compile('Device Id.*', re.I)
             m = p.search(output)
             if m:
@@ -205,12 +204,12 @@ def get_raid_data(instance_name='', *args):
             m = p.search(output)
             if m:
                 result['MEC'] = m.group(0).split(':')[1].strip()
-    
+
             p = re.compile('Other Error Count.*', re.I)
             m = p.search(output)
             if m:
                 result['OEC'] = m.group(0).split(':')[1].strip()
-    
+
             p = re.compile('Predictive Failure Count.*', re.I)
             m = p.search(output)
             if m:
@@ -224,13 +223,13 @@ def get_raid_data(instance_name='', *args):
             p = re.compile('Raw Size.*', re.I)
             m = p.search(output)
             if m:
-                result['raw_size'] = m.group(0).split()[2].strip()+m.group(0).split()[3].strip()
+                result['raw_size'] = m.group(0).split()[2].strip() + m.group(0).split()[3].strip()
 
             p = re.compile('Firmware state.*', re.I)
             m = p.search(output)
             if m:
                 result['firmware_state'] = m.group(0).split(':')[1].strip()
-    
+
             p = re.compile('Inquiry Data.*', re.I)
             m = p.search(output)
             if m:
@@ -251,7 +250,7 @@ def get_raid_data(instance_name='', *args):
             if m:
                 result['drive_temperature'] = m.group(0).split()[2].lstrip(':').rstrip('C')
 
-#    print result
+            #    print result
     return result
 
 
