@@ -108,7 +108,6 @@ out
 gen
 .gitignore
 .idea/
-extool/Seadog_ETCD_Template.xml
-extool/seadog_codisDashboard_template.xml
-extool/seadog_codisProxy_template.xml
-extool/seadog_kingshard_template.xml
+
+extool/add_monitor_host.py
+.tags
