@@ -54,7 +54,7 @@ class Monitor(object):
         os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib'))
         available = {}
         for file in glob.glob('*_monitor.py'):
-            _, discovery_func, name = get_func_list(file.split('_')[0])
+            _, discovery_func, name = get_func_list(file.split(fs)[0])
             available.update({name: discovery_func})
 
         curr_service = []

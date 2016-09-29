@@ -1,6 +1,6 @@
 #!/opt/17173_install/python-2.7.6/bin/python2.7
 # -*- coding: utf8 -*-
-__author__ = 'Justin Ma'
+__author__ = 'Justin Ma && Harrison Zhu'
 __verion__ = '0.5.0'
 import os
 import sys
@@ -69,6 +69,19 @@ def get_mysql_data(instance_name='', *args):
 
 
 class MySQL_Monitor(object):
+
+    @classmethod
+    def conn(cls, host, port, user, passwd):
+
+        for h in [str(host), 'localhost', '127.0.0.1']:
+            try:
+                conn = MySQLdb.connect(host=h, port=port, user=user, passwd=passwd)
+            except (MySQLdb.MySQLError, MySQLdb.DatabaseError, MySQLdb.Error) as e:
+                conn = -1
+                continue
+
+        return conn
+
     @classmethod
     def _get_innodb_status(cls, text):
         """
@@ -467,37 +480,31 @@ class MySQL_Monitor(object):
         conn = None
         cur = None
         version = [0, 0]
-        try:
-            conn = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd)
+        conn = MySQL_Monitor.conn(host=host, port=port, user=user, passwd=passwd)
+        if conn:
             cur = conn.cursor()
-            # MySQL Community Server (GPL) 5.5.24-log  needed super privilges
             count = cur.execute("show variables like 'version'")
             if count > 0:
                 version = str(dict(cur.fetchall()).get('version', '0.0.0')).split('.')[0:2]
-        except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError,
-                MySQLdb.OperationalError) as e:
-            pass
-        except Exception as e:
-            # print e
-            pass
-        finally:
-            if cur: cur.close()
-            if conn: conn.close()
+            cur.close()
+            conn.close()
+
         return map((lambda x: int(x)), version)
+
 
     @classmethod
     def mysql_ping(cls, host, port, user, passwd):
         result = 0
-        conn = None
-        try:
-            conn = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd)
-            conn.ping()
-        except (MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError, Exception) as e:
-            # print "%s:%s > %s" % (host,port,e)
-            # operationerror: not allowed to connect
+        conn = MySQL_Monitor.conn(host=host, port=port, user=user, passwd=passwd)
+        if conn:
+            try:
+                conn.ping()
+                conn.close()
+            except (
+            MySQLdb.MySQLError, MySQLdb.Error, MySQLdb.InterfaceError, MySQLdb.NotSupportedError, Exception) as e:
+                result = -1
+        else:
             result = -1
-        finally:
-            if conn: conn.close()
         return result
 
     @classmethod
